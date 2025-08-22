@@ -21,7 +21,8 @@
 <body>
   <header>
     <h2>Local Media Player</h2>
-    <input type="file" id="fileInput" accept="video/*" multiple />
+    <!-- 👇 Added explicit extensions so MKV, AVI, MOV show up -->
+    <input type="file" id="fileInput" accept="video/*,.mkv,.avi,.mov,.mp4,.webm" multiple />
   </header>
 
   <div class="player">
