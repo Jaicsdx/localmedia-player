@@ -1,480 +1,520 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Online Media Player</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --bg: #0b0f14;
-      --panel: #0f151d;
-      --muted: #8aa0b6;
-      --text: #eaf2fb;
-      --accent: #4ea1ff;
-      --border: #1b2633;
-      --shadow: 0 6px 24px rgba(0,0,0,.25);
-      --radius: 14px;
-      --sidebar-w: 320px;
+      --bg:#0f1116; --panel:#151823; --muted:#8e95a5; --text:#e6e8ee; --accent:#4f8cff; --accent-2:#22c55e; --danger:#ef4444;
+      --radius:18px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: #0b0f14;
-      color:var(--text);
+    body{margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:linear-gradient(180deg,#0f1116,#0b0d12); color:var(--text)}
+    .app{display:grid; grid-template-columns:360px 1fr; gap:16px; padding:16px; height:100%}
+    @media (max-width: 960px){.app{grid-template-columns:1fr; grid-auto-rows:minmax(min-content, max-content)}}
+    .card{background:var(--panel); border:1px solid #1f2430; border-radius:var(--radius); box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .sidebar{padding:16px; display:flex; flex-direction:column; gap:16px;}
+    h1{font-size:20px; margin:0 0 4px}
+    .sub{color:var(--muted); font-size:13px}
+    label{font-size:13px; color:var(--muted)}
+    input[type="text"], textarea, select{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid #2a3140; outline:none; background:#0f1420; color:var(--text);
     }
-
-    /* Header */
-    header{
-      position:sticky; top:0; z-index:50;
-      display:flex; align-items:center; gap:.75rem;
-      padding:.75rem 1rem;
-      background: rgba(10,14,19,.7);
-      backdrop-filter:saturate(150%) blur(8px);
-      border-bottom:1px solid var(--border);
-    }
-    .brand{font-weight:700}
+    input[type="file"]{width:100%}
+    .row{display:grid; grid-template-columns:1fr; gap:10px}
+    .btn{appearance:none; border:none; border-radius:12px; padding:12px 14px; color:white; background:var(--accent); cursor:pointer; font-weight:600}
+    .btn.secondary{background:#2a3140}
+    .btn.green{background:var(--accent-2)}
+    .btn.red{background:var(--danger)}
+    .btn.small{padding:8px 10px; font-size:12px; font-weight:700}
+    .hint{font-size:12px; color:var(--muted)}
+    .stack{display:flex; gap:8px; flex-wrap:wrap}
+    .movies{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; padding:16px}
+    .movie{background:#0f1420; border:1px solid #232a39; border-radius:16px; overflow:hidden; display:flex; flex-direction:column}
+    .movie .thumb{aspect-ratio:16/9; background:linear-gradient(135deg,#1a2030,#0e1320); display:grid; place-items:center; font-weight:700; color:#a7b0c4}
+    .movie .body{padding:12px; display:flex; flex-direction:column; gap:10px}
+    .movie .title{font-weight:700}
+    .tag{font-size:10px; color:#a7b0c4; background:#1b2131; border:1px solid #283044; padding:4px 6px; border-radius:999px}
+    .player{display:flex; flex-direction:column; gap:12px; padding:16px; height:100%}
+    .player .stage{position:relative; background:black; border-radius:16px; overflow:hidden; border:1px solid #232a39; height:min(70vh, 70dvh)}
+    .stage iframe, .stage video{position:absolute; inset:0; width:100%; height:100%; border:0; background:black}
+    .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
     .grow{flex:1}
-    .ham{
-      appearance:none; border:0; background:transparent; color:var(--text); cursor:pointer;
-      display:grid; place-items:center; width:44px; height:44px; border-radius:10px;
-    }
-    .ham:hover{background:rgba(255,255,255,.06)}
-    .ham svg{width:24px;height:24px}
-
-    /* Layout */
-    .wrap{
-      display:grid;
-      grid-template-columns: var(--sidebar-w) 1fr;
-      gap:1rem; padding:1rem;
-      transition: grid-template-columns .25s ease;
-    }
-    /* Collapse on desktop when body has .sidebar-hidden */
-    body.sidebar-hidden .wrap{
-      grid-template-columns: 0 1fr;
-    }
-
-    /* Sidebar */
-    .sidebar{
-      overflow:auto;
-      border:1px solid var(--border);
-      background:linear-gradient(180deg,#0e141c,#0a1016);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      max-height:calc(100dvh - 96px);
-      transition: transform .25s ease, opacity .2s ease;
-    }
-    /* Slide-away animation when hidden on desktop */
-    body.sidebar-hidden .sidebar{
-      transform: translateX(calc(-1 * var(--sidebar-w)));
-      opacity:0;
-      pointer-events:none;
-    }
-
-    .side-head{
-      display:flex; align-items:center; justify-content:space-between; gap:.75rem;
-      padding:1rem; border-bottom:1px solid var(--border)
-    }
-    .side-head h2{margin:0; font-size:1rem}
-    .side-body{padding:1rem; display:grid; gap:1rem}
-    .section{
-      padding:1rem; border:1px dashed var(--border); border-radius:12px; background:rgba(255,255,255,.02)
-    }
-    .section h3{margin:.2rem 0 .75rem 0; font-size:.95rem}
-    .muted{color:var(--muted); font-size:.92rem}
-    label{display:block; font-size:.88rem; margin:.35rem 0 .35rem .15rem; color:var(--muted)}
-    input[type="text"], input[type="search"], input[type="file"], textarea{
-      width:100%; padding:.75rem .85rem; background:#0d131a; color:var(--text);
-      border:1px solid var(--border); border-radius:12px; outline:none;
-    }
-    textarea{resize:vertical; min-height:72px}
-    .row{display:flex; gap:.6rem; align-items:center; flex-wrap:wrap}
-    .btn{
-      appearance:none; border:1px solid var(--border); background:#111821; color:var(--text);
-      padding:.7rem 1rem; border-radius:12px; cursor:pointer; font-weight:600
-    }
-    .btn:hover{border-color:#27374a; background:#121c27}
-    .btn.primary{background:linear-gradient(180deg,#1e90ff,#1779da); border-color:#1b6ecf}
-    .btn.success{background:linear-gradient(180deg,#34d399,#10b981); border-color:#10b981}
-    .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706); border-color:#d97706}
-    .btn.danger{background:linear-gradient(180deg,#ef4444,#dc2626); border-color:#dc2626}
-
-    /* Main */
-    .main{min-width:0; display:grid; grid-template-rows:auto auto 1fr; gap:1rem}
-    .tabs{ display:flex; gap:.5rem; flex-wrap:wrap}
-    .tab{border:1px solid var(--border); background:#0e141c; color:var(--text);
-      padding:.55rem .9rem; border-radius:999px; font-weight:600; cursor:pointer}
-    .tab.active{border-color:#2563eb; background:rgba(37,99,235,.15)}
-
-    .player{
-      border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:#0a1016; box-shadow:var(--shadow)
-    }
-    .player .p-head{
-      display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid var(--border)
-    }
-    .player .p-body{background:#000}
-    video, iframe{width:100%; height:min(70dvh, 640px); display:block; background:#000}
-
-    .gallery{
-      display:grid; gap:.75rem;
-      grid-template-columns: repeat( auto-fill, minmax(220px, 1fr) );
-    }
-    .card{
-      background:linear-gradient(180deg,#0f151d,#0b1218);
-      border:1px solid var(--border); border-radius:14px; overflow:hidden; min-width:0;
-      display:flex; flex-direction:column;
-    }
-    .card h4{margin:.6rem .85rem .1rem .85rem; font-size:1rem; line-height:1.25}
-    .card .meta{margin:0 .85rem .7rem .85rem; color:var(--muted); font-size:.86rem}
-    .card .cta{display:flex; gap:.5rem; padding:.75rem; border-top:1px solid var(--border); background:#0b1016}
-    .card .cta .btn{flex:1}
-
-    /* Mobile drawer behavior */
-    @media (max-width: 1024px){
-      .wrap{
-        grid-template-columns: 1fr;
-      }
-      .sidebar{
-        position: fixed; z-index:60; inset: 64px 0 0 0; width: min(92vw, 380px);
-        transform: translateX(-110%);
-        opacity:0; pointer-events:none;
-      }
-      body.sidebar-open .sidebar{
-        transform: translateX(0); opacity:1; pointer-events:auto;
-      }
-      .backdrop{
-        position:fixed; z-index:55; inset:64px 0 0 0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .2s ease;
-      }
-      body.sidebar-open .backdrop{opacity:1; pointer-events:auto}
-      /* On mobile we ignore .sidebar-hidden; we use .sidebar-open to show */
-      body.sidebar-hidden .sidebar{transform: translateX(-110%); opacity:0; pointer-events:none;}
-    }
+    .invisible{display:none !important}
+    .status{font-size:12px; color:#a7b0c4}
+    .searchbar{display:flex; gap:8px}
+    .logo{display:flex; align-items:center; gap:8px}
+    .logo .dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:11px; background:#0b0e15; border:1px solid #25304a; padding:2px 6px; border-radius:6px; color:#c5cbe3}
+    .pill{background:#0f1420; border:1px solid #283044; color:#a7b0c4; padding:6px 10px; border-radius:999px; font-size:12px}
+    .drop{border:2px dashed #2a3140; border-radius:14px; padding:10px; text-align:center; color:#a7b0c4}
+    .local-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px}
+    .local-item{background:#0f1420; border:1px solid #232a39; border-radius:12px; padding:8px; cursor:pointer}
+    .local-item:hover{background:#192033}
+    .error{color:#ffb4b4}
   </style>
 </head>
-<body class="sidebar-hidden"><!-- start hidden by default; remove class if you want it visible -->
-  <header>
-    <button class="ham" id="hamburger" aria-label="Toggle sidebar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 6h18M3 12h18M3 18h18"/>
-      </svg>
-    </button>
-    <div class="brand">Online Media Player</div>
-    <div class="grow"></div>
-    <span style="color:var(--muted); font-size:.9rem">Hide/Show left panel with ☰</span>
-  </header>
-
-  <div class="wrap">
-    <!-- LEFT SIDEBAR (everything here is what gets hidden/shown) -->
-    <aside class="sidebar" id="leftSidebar" aria-label="Features panel">
-      <div class="side-head">
-        <h2>Controls & Library Tools</h2>
-        <button class="btn" id="closeSidebar">✕</button>
+<body>
+  <div class="app">
+    <!-- Sidebar / Admin -->
+    <aside class="card sidebar">
+      <div class="logo">
+        <div class="dot"></div>
+        <div>
+          <h1>Online Media Player</h1>
+          <div class="sub">Add movies (Name + OneDrive link) or play local files. JSON is still supported.</div>
+        </div>
       </div>
-      <div class="side-body">
-        <!-- Add / Edit movie -->
-        <div class="section">
-          <h3>Add movies (Name + OneDrive link) or play local files. JSON is still supported.</h3>
-          <div class="row" style="margin-top:.5rem; gap:.8rem">
-            <span class="muted">Cloud Library</span>
-            <span class="muted">Local Files</span>
-          </div>
-          <label for="movieTitle">Movie Name</label>
-          <input id="movieTitle" type="text" placeholder="e.g., Inception (2010)" autocomplete="off"/>
 
-          <label for="movieLink" style="margin-top:.65rem">OneDrive Link or Embed Code</label>
-          <textarea id="movieLink" placeholder="Paste OneDrive embed link or share URL"></textarea>
+      <!-- MODE SWITCH -->
+      <div class="stack">
+        <span id="cloudMode" class="pill">Cloud Library</span>
+        <span id="localMode" class="pill">Local Files</span>
+      </div>
 
-          <p class="muted" style="margin-top:.35rem">
-            Tip: In OneDrive, open the video → <b>Embed</b> → copy the iframe or URL. This app auto-converts most OneDrive links.
-          </p>
-
-          <div class="row" style="margin-top:.6rem">
-            <button id="addBtn" class="btn primary">Add Movie</button>
-            <button id="saveBtn" class="btn success" style="display:none">Save Changes</button>
-            <button id="cancelBtn" class="btn">Cancel</button>
-          </div>
+      <!-- CLOUD CONTROLS (existing) -->
+      <div id="cloudControls">
+        <div class="row">
+          <label>Movie Name</label>
+          <input id="movieName" type="text" placeholder="e.g., Inception (2010)" />
         </div>
-
-        <!-- Search -->
-        <div class="section">
-          <h3>Search movies...</h3>
-          <input id="searchBox" type="search" placeholder="Search movies..."/>
-          <div class="row" style="margin-top:.5rem">
-            <button id="clearSearch" class="btn">Clear</button>
-          </div>
+        <div class="row">
+          <label>OneDrive Link or Embed Code</label>
+          <textarea id="movieLink" rows="3" placeholder="Paste OneDrive embed link or share URL"></textarea>
+          <div class="hint">Tip: In OneDrive, open the video → <span class="kbd">Embed</span> → copy the iframe or URL. This app auto-converts most OneDrive links.</div>
         </div>
+        <div class="stack">
+          <button class="btn" id="addBtn">Add Movie</button>
+          <button class="btn secondary" id="updateBtn" disabled>Save Changes</button>
+          <button class="btn red" id="cancelEditBtn" disabled>Cancel</button>
+        </div>
+        <hr style="border-color:#232a39; opacity:.3">
+        <div class="searchbar">
+          <input id="searchInput" type="text" placeholder="Search movies..." />
+          <button class="btn small" id="clearSearchBtn">Clear</button>
+        </div>
+        <div class="row">
+          <label>Data Management</label>
+          <div class="stack">
+            <button class="btn small green" id="exportBtn">Download movies.json</button>
+            <label class="btn small secondary" for="importFile" style="cursor:pointer">Import JSON</label>
+            <input id="importFile" type="file" accept="application/json" class="invisible" />
+            <button class="btn small red" id="clearBtn">Clear All</button>
+          </div>
+          <div class="status" id="status">Loading…</div>
+        </div>
+        <div class="hint">
+          <strong>Make it permanent on GitHub Pages:</strong>
+          <ol style="margin:6px 0 0 16px; padding:0; line-height:1.6">
+            <li>Use <em>Download movies.json</em> after adding titles.</li>
+            <li>Upload <span class="kbd">movies.json</span> to your repo (same folder as this HTML).</li>
+            <li>Deploy with GitHub Pages. Visitors will load the shared <span class="kbd">movies.json</span>.</li>
+          </ol>
+        </div>
+      </div>
 
-        <!-- Data Management -->
-        <div class="section">
-          <h3>Data Management</h3>
-          <div class="row">
-            <button id="downloadJson" class="btn">Download movies.json</button>
-            <label class="btn" for="importJsonInput" style="cursor:pointer">Import JSON</label>
-            <input id="importJsonInput" type="file" accept="application/json" style="display:none" />
-          </div>
-          <div class="row" style="margin-top:.5rem">
-            <button id="clearAll" class="btn danger">Clear All</button>
-          </div>
-          <p class="muted" style="margin-top:.6rem" id="sharedNote">
-            Using shared <code>movies.json</code> from your site.
-          </p>
-          <div class="muted" style="margin-top:.5rem">
-            <strong>Make it permanent on GitHub Pages:</strong>
-            <ol style="margin:.35rem 0 .2rem 1.1rem; padding:0; line-height:1.55">
-              <li>Use <em>Download movies.json</em> after adding titles.</li>
-              <li>Upload <code>movies.json</code> to your repo (same folder as this HTML).</li>
-              <li>Deploy with GitHub Pages. Visitors will load the shared <code>movies.json</code>.</li>
-            </ol>
-          </div>
+      <!-- LOCAL CONTROLS -->
+      <div id="localControls" class="invisible">
+        <div class="row">
+          <label>Pick local files (drag & drop or choose)</label>
+          <input id="localPicker" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.m4v" multiple />
+          <div id="dropZone" class="drop">Drop videos here</div>
+          <div class="hint">MKV may not play if codecs are unsupported in your browser. If it fails, use Cast of the tab or open in VLC.</div>
+        </div>
+        <div class="row">
+          <label>Selected files</label>
+          <div id="localList" class="local-list"></div>
         </div>
       </div>
     </aside>
 
-    <!-- Backdrop for mobile -->
-    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-
-    <!-- RIGHT: Main -->
-    <main class="main">
-      <!-- Tabs / actions -->
-      <div class="tabs" role="tablist" aria-label="Content sources">
-        <button class="tab active" id="tabCloud" role="tab" aria-selected="true">Cloud Library</button>
-        <button class="tab" id="tabLocal" role="tab" aria-selected="false">Local Files</button>
-      </div>
-
-      <!-- Quick search (optional) -->
-      <div class="row">
-        <input id="searchBoxTop" type="search" style="flex:1" placeholder="Search movies..." />
-        <button id="clearSearchTop" class="btn">Clear</button>
-      </div>
-
-      <!-- Player -->
-      <section class="player" aria-label="Player">
-        <div class="p-head">
-          <strong id="nowPlaying">Select a movie to play</strong>
-          <div class="row">
-            <button class="btn" id="editSelected" style="display:none" title="Edit currently selected">Edit</button>
-            <button class="btn warn" id="removeSelected" style="display:none" title="Remove from library">Remove</button>
+    <!-- Main: Library + Player -->
+    <main class="card" style="display:flex; flex-direction:column; min-height:0">
+      <div class="player">
+        <div class="controls">
+          <div class="stack">
+            <button class="btn small" id="fullscreenBtn">Fullscreen Player</button>
+            <button class="btn small secondary" id="stopBtn">Stop</button>
           </div>
+          <div class="grow"></div>
+          <div class="status" id="nowPlaying">Nothing playing</div>
         </div>
-        <div class="p-body">
-          <video id="video" controls preload="metadata" style="display:none"></video>
-          <iframe id="iframe" allowfullscreen style="display:none" loading="lazy" referrerpolicy="no-referrer"></iframe>
-        </div>
-      </section>
 
-      <!-- Cloud Library gallery -->
-      <section id="cloudView" aria-label="Cloud Library">
-        <div class="gallery" id="cloudGallery"></div>
-      </section>
-
-      <!-- Local files view -->
-      <section id="localView" aria-label="Local Files" style="display:none">
-        <div class="section" style="margin-bottom:1rem">
-          <h3>Local Files</h3>
-          <input id="localPicker" type="file" accept="video/*" multiple />
-          <p class="muted" style="margin-top:.4rem">Local files never leave your device.</p>
+        <div class="stage" id="stage">
+          <!-- Cloud iframe -->
+          <iframe id="cloudPlayer" class="invisible" allowfullscreen referrerpolicy="no-referrer"></iframe>
+          <!-- Local video -->
+          <video id="localPlayer" class="invisible" controls playsinline></video>
         </div>
-        <div class="gallery" id="localGallery"></div>
-      </section>
+
+        <div id="playError" class="status error"></div>
+      </div>
+
+      <div class="movies" id="movies"></div>
     </main>
   </div>
 
-  <script>
-    ;(()=>{
-      const $ = s => document.querySelector(s);
-      const el = (t,a={},c=[])=>{const n=document.createElement(t);for(const[k,v]of Object.entries(a)){if(k==='class')n.className=v;else if(k==='dataset')Object.assign(n.dataset,v);else if(k.startsWith('on')&&typeof v==='function')n.addEventListener(k.slice(2),v);else n.setAttribute(k,v)};if(typeof c==='string')n.textContent=c;else c.forEach(x=>n.appendChild(x));return n};
-      const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const storeKey = 'omp_movies_v1';
+  const state = { movies: [], mode: 'remote', editingId: null, uiMode: 'cloud', localFiles: [] };
 
-      const state = { movies:[], selectedId:null, localFiles:[], usingSharedJson:false, editingId:null };
-      const persistKey="omp.movies.v2";
+  const els = {
+    // mode
+    cloudMode: $('#cloudMode'),
+    localMode: $('#localMode'),
+    cloudControls: $('#cloudControls'),
+    localControls: $('#localControls'),
 
-      // Sidebar toggle (the only thing you asked for)
-      const body = document.body;
-      const isMobile = ()=> window.matchMedia('(max-width:1024px)').matches;
-      function toggleSidebar(){
-        if(isMobile()){
-          // mobile = use .sidebar-open class to slide panel in/out
-          if(body.classList.contains('sidebar-open')) body.classList.remove('sidebar-open');
-          else body.classList.add('sidebar-open');
-        }else{
-          // desktop = collapse/expand with .sidebar-hidden
-          body.classList.toggle('sidebar-hidden');
-        }
+    // cloud (existing)
+    name: $('#movieName'),
+    link: $('#movieLink'),
+    addBtn: $('#addBtn'),
+    updateBtn: $('#updateBtn'),
+    cancelEditBtn: $('#cancelEditBtn'),
+    exportBtn: $('#exportBtn'),
+    importFile: $('#importFile'),
+    clearBtn: $('#clearBtn'),
+    search: $('#searchInput'),
+    clearSearch: $('#clearSearchBtn'),
+    status: $('#status'),
+    grid: $('#movies'),
+
+    // players
+    cloudPlayer: $('#cloudPlayer'),
+    localPlayer: $('#localPlayer'),
+    stage: $('#stage'),
+    nowPlaying: $('#nowPlaying'),
+    fullscreenBtn: $('#fullscreenBtn'),
+    stopBtn: $('#stopBtn'),
+    playError: $('#playError'),
+
+    // local
+    localPicker: $('#localPicker'),
+    dropZone: $('#dropZone'),
+    localList: $('#localList'),
+  };
+
+  // --- UTIL: OneDrive link normalization (unchanged) ---
+  function normalizeOneDriveLink(input){
+    if(!input) throw new Error('Empty link');
+    let link = input.trim();
+    const m = link.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*><\/iframe>/i) || link.match(/src=["']([^"']+)["']/i);
+    if(m && m[1]) link = m[1];
+    try{ const u = new URL(link); if(u.hostname.includes('onedrive.live.com')){
+      if(u.pathname.includes('/embed')) return link;
+      const resid = u.searchParams.get('resid');
+      const auth = u.searchParams.get('authkey');
+      if(resid){
+        const embed = new URL('https://onedrive.live.com/embed');
+        embed.searchParams.set('resid', resid);
+        if(auth) embed.searchParams.set('authkey', auth);
+        embed.searchParams.set('em','2');
+        return embed.toString();
       }
-      function closeSidebar(){
-        body.classList.remove('sidebar-open');
-        // on desktop, keep collapsed if already hidden
-      }
+    }} catch(e){}
+    if(/(^|\.)1drv\.ms\b/.test(link)){
+      throw new Error('Short 1drv.ms links cannot be auto-converted. In OneDrive use **Embed**.');
+    }
+    return link;
+  }
 
-      // OneDrive helpers (kept same)
-      function extractIframeSrc(html){const m=String(html||'').match(/<iframe[^>]+src=["']([^"']+)["']/i);return m?m[1]:null}
-      function isProbablyVideoUrl(u){return /\.(mp4|webm|m4v|mov|mkv)(\?|#|$)/i.test(u)}
-      function looksLikeOneDrive(u){try{const x=new URL(u);return /onedrive\.live\.com$/.test(x.hostname)||/1drv\.ms$/.test(x.hostname)}catch(e){return false}}
-      function toOneDriveEmbed(u){try{const url=new URL(u);const resid=url.searchParams.get('resid');const authkey=url.searchParams.get('authkey');if(resid){const base=`https://onedrive.live.com/embed?resid=${encodeURIComponent(resid)}&em=2`;return authkey?`${base}&authkey=${encodeURIComponent(authkey)}`:base}return u}catch(e){return u}}
-      function normalizeLink(raw){
-        const trimmed=String(raw||'').trim(); if(!trimmed) return null;
-        const iframeSrc=extractIframeSrc(trimmed); if(iframeSrc) return {kind:'iframe',url:iframeSrc};
-        if(isProbablyVideoUrl(trimmed)) return {kind:'video',url:trimmed};
-        if(looksLikeOneDrive(trimmed)) return {kind:'iframe',url:toOneDriveEmbed(trimmed)};
-        return {kind:'iframe',url:trimmed};
-      }
+  function saveLocal(){
+    localStorage.setItem(storeKey, JSON.stringify(state.movies));
+  }
+  function loadLocal(){
+    try{
+      const raw = localStorage.getItem(storeKey);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return [] }
+  }
 
-      // Storage
-      function loadLocal(){try{const raw=localStorage.getItem(persistKey);if(!raw)return null;const arr=JSON.parse(raw);return Array.isArray(arr)?arr:null}catch(e){return null}}
-      function saveLocal(){try{localStorage.setItem(persistKey,JSON.stringify(state.movies))}catch(e){}}
+  async function loadRemoteJSON(){
+    try{
+      const res = await fetch('movies.json', {cache:'no-store'});
+      if(!res.ok) throw new Error('no file');
+      const arr = await res.json();
+      if(!Array.isArray(arr)) throw new Error('bad format');
+      state.mode = 'remote';
+      return arr;
+    }catch(e){
+      state.mode = 'local-store';
+      return null;
+    }
+  }
 
-      // Elements
-      const videoEl=$("#video"), iframeEl=$("#iframe"), nowPlaying=$("#nowPlaying");
-      const gallery=$("#cloudGallery"), localGallery=$("#localGallery");
+  function renderStatus(){
+    if(els.status){
+      els.status.innerHTML = state.mode === 'remote'
+        ? 'Using shared \u003ckbd\u003Emovies.json\u003c/kbd\u003E from your site.'
+        : 'Using local browser storage. Export JSON to make it permanent on GitHub.';
+    }
+  }
 
-      function cardForMovie(m){
-        const play = el('button',{class:'btn primary', onclick:()=>selectMovie(m.id)},['Play']);
-        const edit = el('button',{class:'btn', onclick:()=>beginEdit(m.id)},['Edit']);
-        const del  = el('button',{class:'btn warn', onclick:()=>removeMovie(m.id)},['Delete']);
-        return el('div',{class:'card', dataset:{id:m.id}},[
-          el('h4',{},[document.createTextNode(m.title||'Untitled')]),
-          el('p',{class:'meta'},[document.createTextNode(m.kind==='video'?'Direct video':'OneDrive / iframe')]),
-          el('div',{class:'cta'},[play, edit, del])
-        ]);
-      }
-      function renderCloud(term=''){
-        gallery.innerHTML='';
-        const q=String(term||'').toLowerCase();
-        const list=q?state.movies.filter(m=>(m.title||'').toLowerCase().includes(q)):state.movies.slice();
-        if(!list.length){
-          gallery.appendChild(el('div',{class:'section muted'},['No movies yet. Open ☰ and add some.']));
-          return;
-        }
-        list.forEach(m=>gallery.appendChild(cardForMovie(m)));
-      }
-      function renderLocal(){
-        localGallery.innerHTML='';
-        if(!state.localFiles.length){
-          localGallery.appendChild(el('div',{class:'section muted'},['Pick local video files to list them here.']));
-          return;
-        }
-        for(const f of state.localFiles){
-          const btn=el('button',{class:'btn primary', onclick:()=>playLocal(f)},['Play']);
-          localGallery.appendChild(el('div',{class:'card'},[
-            el('h4',{},[document.createTextNode(f.name)]),
-            el('p',{class:'meta'},[`Local file — ${(f.size/1_000_000).toFixed(1)} MB`]),
-            el('div',{class:'cta'},[btn])
-          ]));
-        }
-      }
-      function setPlayer(kind,url,title=''){
-        videoEl.pause(); videoEl.removeAttribute('src'); videoEl.style.display='none';
-        iframeEl.removeAttribute('src'); iframeEl.style.display='none';
-        if(kind==='video'){ videoEl.style.display=''; videoEl.src=url; nowPlaying.textContent=`Now playing: ${title}`; setTimeout(()=>videoEl.play().catch(()=>{}),50); }
-        else { iframeEl.style.display=''; iframeEl.src=url; nowPlaying.textContent=`Now playing (iframe): ${title}`; }
-        $("#editSelected").style.display = state.selectedId ? '' : 'none';
-        $("#removeSelected").style.display = state.selectedId ? '' : 'none';
-      }
-      function selectMovie(id){ const m=state.movies.find(x=>x.id===id); if(!m) return; state.selectedId=id; setPlayer(m.kind,m.url,m.title); }
-      function beginEdit(id){ const m=state.movies.find(x=>x.id===id); if(!m) return;
-        state.editingId=id; $("#movieTitle").value=m.title||''; $("#movieLink").value=m.original||m.url||'';
-        $("#saveBtn").style.display=''; openSidebar();
-      }
-      function addMovie(){
-        const title=$("#movieTitle").value.trim(); const raw=$("#movieLink").value.trim();
-        if(!title||!raw) return alert("Enter both Movie Name and OneDrive link/embed.");
-        const norm=normalizeLink(raw); if(!norm) return alert("Could not understand that link.");
-        state.movies.unshift({id:uid(),title,url:norm.url,kind:norm.kind,original:raw,addedAt:Date.now()});
-        saveLocal(); renderCloud($("#searchBox").value||$("#searchBoxTop").value);
-      }
-      function saveChanges(){
-        const id=state.editingId; if(!id) return;
-        const title=$("#movieTitle").value.trim(); const raw=$("#movieLink").value.trim();
-        if(!title||!raw) return alert("Enter both Movie Name and OneDrive link/embed.");
-        const norm=normalizeLink(raw); if(!norm) return alert("Could not understand that link.");
-        const i=state.movies.findIndex(x=>x.id===id);
-        if(i>=0){ state.movies[i]={...state.movies[i],title,url:norm.url,kind:norm.kind,original:raw,updatedAt:Date.now()};
-          saveLocal(); renderCloud($("#searchBox").value||$("#searchBoxTop").value);
-          if(state.selectedId===id) setPlayer(norm.kind,norm.url,title);
-        }
-      }
-      function removeMovie(id){
-        if(!confirm("Remove this movie from your Cloud Library?")) return;
-        const i=state.movies.findIndex(x=>x.id===id);
-        if(i>=0){ state.movies.splice(i,1); if(state.selectedId===id){state.selectedId=null; nowPlaying.textContent="Select a movie to play"; setPlayer('video','');}
-          saveLocal(); renderCloud($("#searchBox").value||$("#searchBoxTop").value);
-        }
-      }
-      function playLocal(f){ const url=URL.createObjectURL(f); state.selectedId=null; setPlayer('video',url,f.name); }
+  function renderMovies(){
+    const q = (els.search?.value || '').trim().toLowerCase();
+    const list = state.movies.filter(m => m.name.toLowerCase().includes(q));
+    els.grid.innerHTML = list.map(m => `
+      <div class="movie" data-id="${m.id}">
+        <div class="thumb">16:9</div>
+        <div class="body">
+          <div class="title">${escapeHtml(m.name)}</div>
+          <div class="stack">
+            <span class="tag">${new Date(m.addedAt||Date.now()).toLocaleDateString()}</span>
+          </div>
+          <div class="stack">
+            <button class="btn small" data-action="play">Play</button>
+            <button class="btn small secondary" data-action="edit">Edit</button>
+            <button class="btn small red" data-action="remove">Delete</button>
+          </div>
+        </div>
+      </div>`).join('') || `<div class="hint" style="padding:12px">No movies yet. Add one on the left.</div>`;
+  }
 
-      // Import/Export
-      function downloadJson(){
-        const data=JSON.stringify(state.movies,null,2);
-        const blob=new Blob([data],{type:'application/json'});
-        const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='movies.json';
-        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  function playCloud(m){
+    hideLocal();
+    els.cloudPlayer.classList.remove('invisible');
+    els.cloudPlayer.src = m.url;
+    els.nowPlaying.textContent = 'Now Playing (Cloud): ' + m.name;
+  }
+
+  function stopPlayback(){
+    els.cloudPlayer.src = 'about:blank';
+    els.localPlayer.pause();
+    els.localPlayer.removeAttribute('src');
+    els.localPlayer.load();
+    els.nowPlaying.textContent = 'Nothing playing';
+    els.playError.textContent = '';
+  }
+
+  function startEdit(m){
+    state.editingId = m.id;
+    els.name.value = m.name;
+    els.link.value = m.url;
+    els.addBtn.disabled = true;
+    els.updateBtn.disabled = false;
+    els.cancelEditBtn.disabled = false;
+  }
+
+  function clearEditor(){
+    state.editingId = null;
+    els.name.value = '';
+    els.link.value = '';
+    els.addBtn.disabled = false;
+    els.updateBtn.disabled = true;
+    els.cancelEditBtn.disabled = true;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  // ---------- LOCAL PLAYBACK ----------
+  function showLocal(){
+    els.cloudControls.classList.add('invisible');
+    els.localControls.classList.remove('invisible');
+    els.cloudPlayer.classList.add('invisible');
+    els.localPlayer.classList.remove('invisible');
+    state.uiMode = 'local';
+  }
+  function hideLocal(){
+    els.localPlayer.classList.add('invisible');
+    els.cloudPlayer.classList.remove('invisible');
+    state.uiMode = 'cloud';
+  }
+
+  function listLocalFiles(files){
+    state.localFiles = files;
+    els.localList.innerHTML = files.map((f, i)=>`
+      <div class="local-item" data-i="${i}">
+        ${escapeHtml(f.name)}
+      </div>
+    `).join('') || `<div class="hint">No local files selected yet.</div>`;
+  }
+
+  function guessMime(file){
+    // Trust the file.type if present; otherwise guess by extension
+    if(file.type) return file.type;
+    const ext = file.name.toLowerCase().split('.').pop();
+    const map = {
+      mp4:'video/mp4', m4v:'video/mp4', mov:'video/quicktime',
+      webm:'video/webm', mkv:'video/x-matroska', avi:'video/x-msvideo'
+    };
+    return map[ext] || 'video/*';
+  }
+
+  function canBrowserPlay(mime){
+    // Quick capability hint; not perfect for MKV (varies by codec)
+    const v = document.createElement('video');
+    const res = v.canPlayType(mime);
+    return !!res;
+  }
+
+  function playLocalFile(file){
+    els.playError.textContent = '';
+    const mime = guessMime(file);
+    // Always attempt to play; but show a friendly warning if likely unsupported
+    if(!canBrowserPlay(mime) && /\.mkv$/i.test(file.name)){
+      els.playError.textContent = 'Heads up: Your browser might not support some MKV codecs. If playback fails, cast the tab or open in a desktop player (e.g., VLC).';
+    }
+    const url = URL.createObjectURL(file);
+    els.localPlayer.src = url;
+    els.localPlayer.play().catch(()=>{ /* user gesture required or unsupported */ });
+    els.nowPlaying.textContent = 'Now Playing (Local): ' + file.name;
+
+    // Error handler for unsupported codecs/containers
+    els.localPlayer.onerror = () => {
+      els.playError.textContent = 'Could not play this file. Likely unsupported codec in the container. Try VLC or convert to MP4 (H.264/AAC).';
+    };
+  }
+
+  // ---------- Event handlers ----------
+  // Mode switch
+  els.cloudMode.addEventListener('click', () => {
+    hideLocal();
+    els.cloudControls.classList.remove('invisible');
+    els.localControls.classList.add('invisible');
+  });
+  els.localMode.addEventListener('click', () => {
+    showLocal();
+    els.cloudControls.classList.add('invisible');
+  });
+
+  // Cloud CRUD
+  els.addBtn.addEventListener('click', () => {
+    const name = els.name.value.trim();
+    const raw = els.link.value.trim();
+    if(!name || !raw){ alert('Please enter a movie name and a OneDrive link.'); return; }
+    let link;
+    try{ link = normalizeOneDriveLink(raw); }
+    catch(e){ alert(e.message); return; }
+    const movie = { id: crypto.randomUUID(), name, url: link, addedAt: Date.now() };
+    state.movies.unshift(movie);
+    saveLocal();
+    renderMovies();
+    clearEditor();
+  });
+
+  els.updateBtn.addEventListener('click', () => {
+    if(!state.editingId) return;
+    const name = els.name.value.trim();
+    const raw = els.link.value.trim();
+    if(!name || !raw){ alert('Please enter a movie name and a OneDrive link.'); return; }
+    let link;
+    try{ link = normalizeOneDriveLink(raw); }
+    catch(e){ alert(e.message); return; }
+    const i = state.movies.findIndex(m => m.id === state.editingId);
+    if(i>=0){ state.movies[i] = { ...state.movies[i], name, url: link }; }
+    saveLocal();
+    renderMovies();
+    clearEditor();
+  });
+
+  els.cancelEditBtn.addEventListener('click', clearEditor);
+
+  els.grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const card = e.target.closest('.movie');
+    const id = card?.dataset.id;
+    const m = state.movies.find(x => x.id === id);
+    if(!m) return;
+
+    const action = btn.dataset.action;
+    if(action === 'play'){ hideLocal(); playCloud(m); }
+    else if(action === 'edit') startEdit(m);
+    else if(action === 'remove'){
+      if(confirm('Delete this movie?')){
+        const i = state.movies.findIndex(x => x.id === id);
+        if(i>=0) state.movies.splice(i,1);
+        saveLocal();
+        renderMovies();
+        if(els.nowPlaying.textContent.includes(m.name)) stopPlayback();
       }
-      function importJson(file){
-        const reader=new FileReader();
-        reader.onload=()=>{
-          try{
-            const arr=JSON.parse(reader.result); if(!Array.isArray(arr)) throw new Error("Not an array");
-            state.movies=arr.map(x=>({id:x.id||uid(),title:String(x.title||'Untitled'),url:String(x.url||''),kind:x.kind==='video'?'video':'iframe',original:x.original||x.url||''}));
-            saveLocal(); renderCloud($("#searchBox").value||$("#searchBoxTop").value); alert("Imported movies.json successfully.");
-          }catch(e){ alert("Failed to import: "+e.message); }
-        };
-        reader.readAsText(file);
-      }
-      function clearAll(){
-        if(!confirm("Clear your local Cloud Library?")) return;
-        state.movies=[]; saveLocal(); renderCloud(); state.selectedId=null; nowPlaying.textContent="Select a movie to play"; setPlayer('video','');
-      }
+    }
+  });
 
-      // Search sync
-      function syncSearch(val){ $("#searchBox").value=val; $("#searchBoxTop").value=val; renderCloud(val); }
+  els.exportBtn.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state.movies, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'movies.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
 
-      // Init
-      async function init(){
-        try{
-          const res=await fetch('./movies.json',{cache:'no-store'});
-          if(res.ok){ const arr=await res.json(); if(Array.isArray(arr)){
-            state.movies=arr.map(x=>({id:x.id||uid(),title:String(x.title||'Untitled'),url:String(x.url||''),kind:x.kind==='video'?'video':'iframe',original:x.original||x.url||''}));
-            state.usingSharedJson=true;
-          }}
-        }catch(e){}
-        if(!state.movies.length){ const local=loadLocal(); if(local&&local.length){state.movies=local; state.usingSharedJson=false;} }
-        $("#sharedNote").textContent = state.usingSharedJson ? 'Using shared movies.json from your site.' : 'No shared movies.json detected — using your browser storage.';
-        renderCloud(); renderLocal();
-      }
+  els.importFile.addEventListener('change', async () => {
+    const file = els.importFile.files[0]; if(!file) return;
+    try{
+      const text = await file.text();
+      const arr = JSON.parse(text);
+      if(!Array.isArray(arr)) throw new Error('Invalid JSON: expected an array');
+      state.movies = arr.map(x => ({ id: x.id || crypto.randomUUID(), name: String(x.name||'Untitled'), url: String(x.url||''), addedAt: x.addedAt||Date.now() }));
+      saveLocal();
+      renderMovies();
+      alert('Imported successfully!');
+    }catch(err){ alert('Import failed: ' + err.message); }
+    finally{ els.importFile.value = ''; }
+  });
 
-      // Wire up
-      $("#hamburger").addEventListener('click', toggleSidebar);
-      $("#closeSidebar").addEventListener('click', closeSidebar);
-      $("#backdrop")?.addEventListener('click', closeSidebar);
-      window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSidebar(); });
+  els.clearBtn.addEventListener('click', () => {
+    if(confirm('Clear all movies from this browser?')){
+      state.movies = [];
+      saveLocal();
+      renderMovies();
+      stopPlayback();
+    }
+  });
 
-      // Tabs
-      $("#tabCloud").addEventListener('click', ()=>{ $("#tabCloud").classList.add('active'); $("#tabLocal").classList.remove('active'); $("#cloudView").style.display=''; $("#localView").style.display='none'; });
-      $("#tabLocal").addEventListener('click', ()=>{ $("#tabLocal").classList.add('active'); $("#tabCloud").classList.remove('active'); $("#cloudView").style.display='none'; $("#localView").style.display=''; });
+  els.search?.addEventListener('input', renderMovies);
+  els.clearSearch?.addEventListener('click', () => { els.search.value=''; renderMovies(); });
 
-      // Add/Edit
-      $("#addBtn").addEventListener('click', addMovie);
-      $("#saveBtn").addEventListener('click', saveChanges);
-      $("#cancelBtn").addEventListener('click', ()=>{ $("#movieTitle").value=''; $("#movieLink").value=''; });
+  els.fullscreenBtn.addEventListener('click', () => {
+    const el = els.stage;
+    if(document.fullscreenElement){ document.exitFullscreen(); }
+    else{ el.requestFullscreen?.(); }
+  });
 
-      // Import/Export
-      $("#downloadJson").addEventListener('click', downloadJson);
-      $("#importJsonInput").addEventListener('change', e=>{ const f=e.target.files?.[0]; if(f) importJson(f); e.target.value=''; });
-      $("#clearAll").addEventListener('click', clearAll);
+  els.stopBtn.addEventListener('click', stopPlayback);
 
-      // Search
-      $("#searchBox").addEventListener('input', e=>syncSearch(e.target.value));
-      $("#searchBoxTop").addEventListener('input', e=>syncSearch(e.target.value));
-      $("#clearSearch").addEventListener('click', ()=>syncSearch(''));
-      $("#clearSearchTop").addEventListener('click', ()=>syncSearch(''));
+  // Local file input + DnD
+  els.localPicker.addEventListener('change', (e)=>{
+    const files = Array.from(e.target.files || []);
+    listLocalFiles(files);
+    showLocal();
+  });
+  ;['dragenter','dragover'].forEach(ev => els.dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); els.dropZone.style.borderColor = '#4f8cff';
+  }));
+  ;['dragleave','drop'].forEach(ev => els.dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); els.dropZone.style.borderColor = '#2a3140';
+  }));
+  els.dropZone.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files || []).filter(f => /^video\//.test(f.type) || /\.(mkv|mp4|webm|mov|avi|m4v)$/i.test(f.name));
+    listLocalFiles(files);
+    showLocal();
+  });
 
-      // Local files
-      $("#localPicker").addEventListener('change', e=>{ state.localFiles=Array.from(e.target.files||[]); renderLocal(); });
+  els.localList.addEventListener('click', e => {
+    const item = e.target.closest('.local-item');
+    if(!item) return;
+    const i = Number(item.dataset.i);
+    const file = state.localFiles[i];
+    if(file){ showLocal(); playLocalFile(file); }
+  });
 
-      init();
-    })();
-  </script>
+  // --- Init ---
+  (async function init(){
+    const remote = await loadRemoteJSON();
+    if(remote){ state.movies = remote; }
+    else{ state.movies = loadLocal(); }
+    renderStatus();
+    renderMovies();
+  })();
+})();
+</script>
 </body>
 </html>
