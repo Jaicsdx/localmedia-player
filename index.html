@@ -1,769 +1,520 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Online Media Player</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
   <style>
     :root{
-      --bg: #0b0f14;
-      --panel: #0f151d;
-      --muted: #8aa0b6;
-      --text: #eaf2fb;
-      --accent: #4ea1ff;
-      --accent-2:#34d399;
-      --danger:#ef4444;
-      --warn:#f59e0b;
-      --border: #1b2633;
-      --shadow: 0 6px 24px rgba(0,0,0,.25);
-      --radius: 14px;
+      --bg:#0f1116; --panel:#151823; --muted:#8e95a5; --text:#e6e8ee; --accent:#4f8cff; --accent-2:#22c55e; --danger:#ef4444;
+      --radius:18px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      background: linear-gradient(180deg, #0b0f14 0%, #0b0f14 60%, #0c1117 100%);
-      color:var(--text);
+    body{margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:linear-gradient(180deg,#0f1116,#0b0d12); color:var(--text)}
+    .app{display:grid; grid-template-columns:360px 1fr; gap:16px; padding:16px; height:100%}
+    @media (max-width: 960px){.app{grid-template-columns:1fr; grid-auto-rows:minmax(min-content, max-content)}}
+    .card{background:var(--panel); border:1px solid #1f2430; border-radius:var(--radius); box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .sidebar{padding:16px; display:flex; flex-direction:column; gap:16px;}
+    h1{font-size:20px; margin:0 0 4px}
+    .sub{color:var(--muted); font-size:13px}
+    label{font-size:13px; color:var(--muted)}
+    input[type="text"], textarea, select{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid #2a3140; outline:none; background:#0f1420; color:var(--text);
     }
-
-    /* App shell */
-    .app{
-      display:grid;
-      grid-template-rows: auto 1fr;
-      min-height:100%;
-    }
-    header{
-      position:sticky; top:0; z-index:50;
-      display:flex; align-items:center; gap:.75rem;
-      padding:.75rem 1rem;
-      background: rgba(10,14,19,.7);
-      backdrop-filter:saturate(150%) blur(8px);
-      border-bottom:1px solid var(--border);
-    }
-    .brand{
-      display:flex; align-items:center; gap:.6rem; font-weight:700; letter-spacing:.2px;
-    }
-    .brand .dot{ width:.6rem; height:.6rem; border-radius:999px; background:var(--accent); box-shadow:0 0 18px rgba(78,161,255,.8)}
+    input[type="file"]{width:100%}
+    .row{display:grid; grid-template-columns:1fr; gap:10px}
+    .btn{appearance:none; border:none; border-radius:12px; padding:12px 14px; color:white; background:var(--accent); cursor:pointer; font-weight:600}
+    .btn.secondary{background:#2a3140}
+    .btn.green{background:var(--accent-2)}
+    .btn.red{background:var(--danger)}
+    .btn.small{padding:8px 10px; font-size:12px; font-weight:700}
+    .hint{font-size:12px; color:var(--muted)}
+    .stack{display:flex; gap:8px; flex-wrap:wrap}
+    .movies{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; padding:16px}
+    .movie{background:#0f1420; border:1px solid #232a39; border-radius:16px; overflow:hidden; display:flex; flex-direction:column}
+    .movie .thumb{aspect-ratio:16/9; background:linear-gradient(135deg,#1a2030,#0e1320); display:grid; place-items:center; font-weight:700; color:#a7b0c4}
+    .movie .body{padding:12px; display:flex; flex-direction:column; gap:10px}
+    .movie .title{font-weight:700}
+    .tag{font-size:10px; color:#a7b0c4; background:#1b2131; border:1px solid #283044; padding:4px 6px; border-radius:999px}
+    .player{display:flex; flex-direction:column; gap:12px; padding:16px; height:100%}
+    .player .stage{position:relative; background:black; border-radius:16px; overflow:hidden; border:1px solid #232a39; height:min(70vh, 70dvh)}
+    .stage iframe, .stage video{position:absolute; inset:0; width:100%; height:100%; border:0; background:black}
+    .controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
     .grow{flex:1}
-    .ham{
-      appearance:none; border:0; background:transparent; color:var(--text); cursor:pointer;
-      display:grid; place-items:center; width:44px; height:44px; border-radius:10px;
-    }
-    .ham:hover{background:rgba(255,255,255,.06)}
-    .ham svg{width:24px;height:24px}
-
-    .layout{
-      position:relative;
-      display:grid;
-      grid-template-columns: 320px 1fr;
-      gap:1rem;
-      padding:1rem;
-    }
-
-    /* Sidebar (features) */
-    .sidebar{
-      border:1px solid var(--border);
-      background:linear-gradient(180deg,#0e141c,#0a1016);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:auto;
-      max-height:calc(100dvh - 96px);
-    }
-    .side-head{
-      display:flex; align-items:center; justify-content:space-between; gap:.75rem;
-      padding:1rem 1rem .75rem 1rem; border-bottom:1px solid var(--border)
-    }
-    .side-head h2{margin:0; font-size:1rem; font-weight:700; letter-spacing:.2px}
-    .side-body{padding:1rem; display:grid; gap:1rem}
-    .section{
-      padding:1rem; border:1px dashed var(--border); border-radius:12px; background:rgba(255,255,255,.02)
-    }
-    .section h3{margin:.2rem 0 .75rem 0; font-size:.95rem}
-    .muted{color:var(--muted); font-size:.92rem}
-    label{display:block; font-size:.88rem; margin:.35rem 0 .35rem .15rem; color:var(--muted)}
-    input[type="text"], input[type="search"], input[type="file"], textarea, select{
-      width:100%; padding:.75rem .85rem; background:#0d131a; color:var(--text);
-      border:1px solid var(--border); border-radius:12px; outline:none;
-    }
-    input::placeholder, textarea::placeholder{color:#6f8297}
-    textarea{resize:vertical; min-height:72px}
-    .row{display:flex; gap:.6rem; align-items:center; flex-wrap:wrap}
-    .btn{
-      appearance:none; border:1px solid var(--border); background:#111821; color:var(--text);
-      padding:.7rem 1rem; border-radius:12px; cursor:pointer; font-weight:600
-    }
-    .btn:hover{border-color:#27374a; background:#121c27}
-    .btn.primary{background:linear-gradient(180deg,#1e90ff,#1779da); border-color:#1b6ecf}
-    .btn.primary:hover{filter:saturate(1.05) brightness(1.02)}
-    .btn.success{background:linear-gradient(180deg,#34d399,#10b981); border-color:#10b981}
-    .btn.warn{background:linear-gradient(180deg,#f59e0b,#d97706); border-color:#d97706}
-    .btn.danger{background:linear-gradient(180deg,#ef4444,#dc2626); border-color:#dc2626}
-    .btn.ghost{background:transparent}
-    .chip{display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:.82rem}
-
-    /* Main area */
-    .main{
-      display:grid; grid-template-rows:auto auto 1fr; gap:1rem; min-width:0;
-    }
-
-    .tabs{ display:flex; gap:.5rem; flex-wrap:wrap}
-    .tab{
-      appearance:none; border:1px solid var(--border); background:#0e141c; color:var(--text);
-      padding:.55rem .9rem; border-radius:999px; cursor:pointer; font-weight:600;
-    }
-    .tab.active{border-color:#2563eb; background:rgba(37,99,235,.15)}
-    .searchbar{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
-    .searchbar .grow{flex:1}
-
-    .player{
-      border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:#0a1016; box-shadow:var(--shadow)
-    }
-    .player .p-head{
-      display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid var(--border)
-    }
-    .player .p-body{padding:0; background:#000}
-    video, iframe{width:100%; height:min(70dvh, 640px); display:block; background:#000}
-
-    .gallery{
-      display:grid; gap:.75rem;
-      grid-template-columns: repeat( auto-fill, minmax(220px, 1fr) );
-    }
-    .card{
-      background:linear-gradient(180deg,#0f151d,#0b1218);
-      border:1px solid var(--border); border-radius:14px; overflow:hidden; min-width:0;
-      display:flex; flex-direction:column;
-    }
-    .card h4{margin:.6rem .85rem .1rem .85rem; font-size:1rem; line-height:1.25}
-    .card .meta{margin:0 .85rem .7rem .85rem; color:var(--muted); font-size:.86rem}
-    .card .cta{display:flex; gap:.5rem; padding:.75rem; border-top:1px solid var(--border); background:#0b1016}
-    .card .cta .btn{flex:1}
-
-    /* Drawer behavior (mobile) */
-    @media (max-width: 1024px){
-      .layout{
-        grid-template-columns: 1fr;
-      }
-      .sidebar{
-        position: fixed; z-index:60; inset: 64px 0 0 auto; width: 92vw; max-width: 380px;
-        transform: translateX(-8px) translateX(-100%);
-        transition: transform .28s ease;
-      }
-      .app.sidebar-open .sidebar{
-        transform: translateX(0);
-      }
-      .backdrop{
-        position:fixed; z-index:55; inset:64px 0 0 0; background:rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:opacity .2s ease;
-      }
-      .app.sidebar-open .backdrop{opacity:1; pointer-events:auto}
-    }
-
-    /* Helper */
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    .note{font-size:.9rem; color:var(--muted)}
-    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; background:#0a1016; border:1px solid var(--border); border-bottom-color:#1d2a3a; padding:.05rem .4rem; border-radius:6px}
+    .invisible{display:none !important}
+    .status{font-size:12px; color:#a7b0c4}
+    .searchbar{display:flex; gap:8px}
+    .logo{display:flex; align-items:center; gap:8px}
+    .logo .dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:11px; background:#0b0e15; border:1px solid #25304a; padding:2px 6px; border-radius:6px; color:#c5cbe3}
+    .pill{background:#0f1420; border:1px solid #283044; color:#a7b0c4; padding:6px 10px; border-radius:999px; font-size:12px}
+    .drop{border:2px dashed #2a3140; border-radius:14px; padding:10px; text-align:center; color:#a7b0c4}
+    .local-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px}
+    .local-item{background:#0f1420; border:1px solid #232a39; border-radius:12px; padding:8px; cursor:pointer}
+    .local-item:hover{background:#192033}
+    .error{color:#ffb4b4}
   </style>
 </head>
 <body>
-  <div id="app" class="app">
-    <header>
-      <button class="ham" id="toggleSidebar" aria-label="Toggle features (hamburger)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M3 12h18M3 18h18"/>
-        </svg>
-      </button>
-      <div class="brand">
-        <span class="dot" aria-hidden="true"></span>
-        <span>Online Media Player</span>
+  <div class="app">
+    <!-- Sidebar / Admin -->
+    <aside class="card sidebar">
+      <div class="logo">
+        <div class="dot"></div>
+        <div>
+          <h1>Online Media Player</h1>
+          <div class="sub">Add movies (Name + OneDrive link) or play local files. JSON is still supported.</div>
+        </div>
       </div>
-      <div class="grow"></div>
-      <span class="chip" id="sourceChip" title="Where the library is loading from">Library: <strong style="margin-left:.35rem" id="librarySource">Loading…</strong></span>
-    </header>
 
-    <div class="layout">
-      <!-- Features Sidebar (hidden/collapsible on mobile) -->
-      <aside class="sidebar" id="sidebar" aria-label="Features panel">
-        <div class="side-head">
-          <h2>Controls & Library Tools</h2>
-          <button class="btn ghost" id="closeSidebar" title="Close (Esc)">
-            ✕
-          </button>
+      <!-- MODE SWITCH -->
+      <div class="stack">
+        <span id="cloudMode" class="pill">Cloud Library</span>
+        <span id="localMode" class="pill">Local Files</span>
+      </div>
+
+      <!-- CLOUD CONTROLS (existing) -->
+      <div id="cloudControls">
+        <div class="row">
+          <label>Movie Name</label>
+          <input id="movieName" type="text" placeholder="e.g., Inception (2010)" />
         </div>
-        <div class="side-body">
-          <!-- Add / Edit movie -->
-          <div class="section">
-            <h3>Add movies (Name + OneDrive link) or play local files. JSON is still supported.</h3>
-            <div class="row" style="margin-top:.5rem; gap:.8rem">
-              <span class="chip">Cloud Library</span>
-              <span class="chip">Local Files</span>
-            </div>
-            <div style="height:.4rem"></div>
-            <label for="movieTitle">Movie Name</label>
-            <input id="movieTitle" type="text" placeholder="e.g., Inception (2010)" autocomplete="off"/>
-
-            <label for="movieLink" style="margin-top:.65rem">OneDrive Link or Embed Code</label>
-            <textarea id="movieLink" placeholder="Paste OneDrive embed link or share URL"></textarea>
-
-            <p class="muted" style="margin-top:.35rem">
-              Tip: In OneDrive, open the video → <b>Embed</b> → copy the iframe or URL. This app auto-converts most OneDrive links.
-            </p>
-
-            <div class="row" style="margin-top:.6rem">
-              <button id="addBtn" class="btn primary">Add Movie</button>
-              <button id="saveBtn" class="btn success" style="display:none">Save Changes</button>
-              <button id="cancelBtn" class="btn" style="display:none">Cancel</button>
-            </div>
-          </div>
-
-          <!-- Search -->
-          <div class="section">
-            <h3>Search movies...</h3>
-            <input id="searchBox" type="search" placeholder="Search movies..."/>
-            <div class="row" style="margin-top:.5rem">
-              <button id="clearSearch" class="btn">Clear</button>
-            </div>
-          </div>
-
-          <!-- Data Management -->
-          <div class="section">
-            <h3>Data Management</h3>
-            <div class="row">
-              <button id="downloadJson" class="btn">Download movies.json</button>
-              <label class="btn" for="importJsonInput" style="cursor:pointer">Import JSON</label>
-              <input id="importJsonInput" type="file" accept="application/json" class="sr-only" />
-            </div>
-            <div class="row" style="margin-top:.5rem">
-              <button id="clearAll" class="btn danger">Clear All</button>
-            </div>
-            <p class="muted" style="margin-top:.6rem" id="sharedNote">
-              Using shared <code>movies.json</code> from your site.
-            </p>
-            <div class="note" style="margin-top:.5rem">
-              <strong>Make it permanent on GitHub Pages:</strong>
-              <ol style="margin:.35rem 0 .2rem 1.1rem; padding:0; line-height:1.55">
-                <li>Use <em>Download movies.json</em> after adding titles.</li>
-                <li>Upload <code>movies.json</code> to your repo (same folder as this HTML).</li>
-                <li>Deploy with GitHub Pages. Visitors will load the shared <code>movies.json</code>.</li>
-              </ol>
-            </div>
-          </div>
+        <div class="row">
+          <label>OneDrive Link or Embed Code</label>
+          <textarea id="movieLink" rows="3" placeholder="Paste OneDrive embed link or share URL"></textarea>
+          <div class="hint">Tip: In OneDrive, open the video → <span class="kbd">Embed</span> → copy the iframe or URL. This app auto-converts most OneDrive links.</div>
         </div>
-      </aside>
-      <div class="backdrop" id="backdrop" aria-hidden="true"></div>
-
-      <!-- Main content -->
-      <main class="main">
-        <!-- Tabs / actions -->
-        <div class="tabs" role="tablist" aria-label="Content sources">
-          <button class="tab active" id="tabCloud" role="tab" aria-selected="true">Cloud Library</button>
-          <button class="tab" id="tabLocal" role="tab" aria-selected="false">Local Files</button>
+        <div class="stack">
+          <button class="btn" id="addBtn">Add Movie</button>
+          <button class="btn secondary" id="updateBtn" disabled>Save Changes</button>
+          <button class="btn red" id="cancelEditBtn" disabled>Cancel</button>
         </div>
-
-        <!-- Search quick lane on desktop (mirrors sidebar search) -->
+        <hr style="border-color:#232a39; opacity:.3">
         <div class="searchbar">
-          <input id="searchBoxTop" type="search" class="grow" placeholder="Search movies..." />
-          <button id="clearSearchTop" class="btn">Clear</button>
-          <button id="openFeatures" class="btn" title="Open features (hamburger)"><span aria-hidden="true">☰</span> Features</button>
+          <input id="searchInput" type="text" placeholder="Search movies..." />
+          <button class="btn small" id="clearSearchBtn">Clear</button>
+        </div>
+        <div class="row">
+          <label>Data Management</label>
+          <div class="stack">
+            <button class="btn small green" id="exportBtn">Download movies.json</button>
+            <label class="btn small secondary" for="importFile" style="cursor:pointer">Import JSON</label>
+            <input id="importFile" type="file" accept="application/json" class="invisible" />
+            <button class="btn small red" id="clearBtn">Clear All</button>
+          </div>
+          <div class="status" id="status">Loading…</div>
+        </div>
+        <div class="hint">
+          <strong>Make it permanent on GitHub Pages:</strong>
+          <ol style="margin:6px 0 0 16px; padding:0; line-height:1.6">
+            <li>Use <em>Download movies.json</em> after adding titles.</li>
+            <li>Upload <span class="kbd">movies.json</span> to your repo (same folder as this HTML).</li>
+            <li>Deploy with GitHub Pages. Visitors will load the shared <span class="kbd">movies.json</span>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- LOCAL CONTROLS -->
+      <div id="localControls" class="invisible">
+        <div class="row">
+          <label>Pick local files (drag & drop or choose)</label>
+          <input id="localPicker" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.m4v" multiple />
+          <div id="dropZone" class="drop">Drop videos here</div>
+          <div class="hint">MKV may not play if codecs are unsupported in your browser. If it fails, use Cast of the tab or open in VLC.</div>
+        </div>
+        <div class="row">
+          <label>Selected files</label>
+          <div id="localList" class="local-list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main: Library + Player -->
+    <main class="card" style="display:flex; flex-direction:column; min-height:0">
+      <div class="player">
+        <div class="controls">
+          <div class="stack">
+            <button class="btn small" id="fullscreenBtn">Fullscreen Player</button>
+            <button class="btn small secondary" id="stopBtn">Stop</button>
+          </div>
+          <div class="grow"></div>
+          <div class="status" id="nowPlaying">Nothing playing</div>
         </div>
 
-        <!-- Player -->
-        <section class="player" aria-label="Player">
-          <div class="p-head">
-            <div class="row">
-              <strong id="nowPlaying">Select a movie to play</strong>
-            </div>
-            <div class="row">
-              <button class="btn" id="editSelected" style="display:none" title="Edit currently selected">Edit</button>
-              <button class="btn warn" id="removeSelected" style="display:none" title="Remove from library">Remove</button>
-            </div>
-          </div>
-          <div class="p-body">
-            <video id="video" controls preload="metadata" style="display:none"></video>
-            <iframe id="iframe" allowfullscreen style="display:none" loading="lazy" referrerpolicy="no-referrer"></iframe>
-          </div>
-        </section>
+        <div class="stage" id="stage">
+          <!-- Cloud iframe -->
+          <iframe id="cloudPlayer" class="invisible" allowfullscreen referrerpolicy="no-referrer"></iframe>
+          <!-- Local video -->
+          <video id="localPlayer" class="invisible" controls playsinline></video>
+        </div>
 
-        <!-- Cloud Library gallery -->
-        <section id="cloudView" aria-label="Cloud Library">
-          <div class="gallery" id="cloudGallery"></div>
-        </section>
+        <div id="playError" class="status error"></div>
+      </div>
 
-        <!-- Local files view -->
-        <section id="localView" aria-label="Local Files" style="display:none">
-          <div class="section" style="margin-bottom:1rem">
-            <h3>Local Files</h3>
-            <input id="localPicker" type="file" accept="video/*" multiple />
-            <p class="muted" style="margin-top:.4rem">Local files never leave your device.</p>
-          </div>
-          <div class="gallery" id="localGallery"></div>
-        </section>
-      </main>
-    </div>
+      <div class="movies" id="movies"></div>
+    </main>
   </div>
 
-  <script>
-    ;(()=>{
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const storeKey = 'omp_movies_v1';
+  const state = { movies: [], mode: 'remote', editingId: null, uiMode: 'cloud', localFiles: [] };
 
-      /** ------------------------------
-       * Utilities
-       * ------------------------------ */
-      const $ = sel => document.querySelector(sel);
-      const el = (tag, attrs={}, children=[])=>{
-        const n = document.createElement(tag);
-        for(const [k,v] of Object.entries(attrs||{})){
-          if(k === 'class') n.className = v;
-          else if(k === 'dataset'){ Object.assign(n.dataset, v); }
-          else if(k.startsWith('on') && typeof v === 'function'){ n.addEventListener(k.slice(2), v); }
-          else if(v !== null && v !== undefined) n.setAttribute(k, v);
-        }
-        if(typeof children === 'string'){ n.textContent = children; }
-        else for(const c of children) n.appendChild(c);
-        return n;
-      };
-      const uid = () => Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
-      const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+  const els = {
+    // mode
+    cloudMode: $('#cloudMode'),
+    localMode: $('#localMode'),
+    cloudControls: $('#cloudControls'),
+    localControls: $('#localControls'),
 
-      /** ------------------------------
-       * State
-       * ------------------------------ */
-      const state = {
-        movies: [],
-        selectedId: null,
-        usingSharedJson: false,
-        editingId: null,
-        localFiles: []
-      };
+    // cloud (existing)
+    name: $('#movieName'),
+    link: $('#movieLink'),
+    addBtn: $('#addBtn'),
+    updateBtn: $('#updateBtn'),
+    cancelEditBtn: $('#cancelEditBtn'),
+    exportBtn: $('#exportBtn'),
+    importFile: $('#importFile'),
+    clearBtn: $('#clearBtn'),
+    search: $('#searchInput'),
+    clearSearch: $('#clearSearchBtn'),
+    status: $('#status'),
+    grid: $('#movies'),
 
-      const persistKey = "omp.movies.v2";
+    // players
+    cloudPlayer: $('#cloudPlayer'),
+    localPlayer: $('#localPlayer'),
+    stage: $('#stage'),
+    nowPlaying: $('#nowPlaying'),
+    fullscreenBtn: $('#fullscreenBtn'),
+    stopBtn: $('#stopBtn'),
+    playError: $('#playError'),
 
-      function loadLocal(){
-        try{
-          const raw = localStorage.getItem(persistKey);
-          if(!raw) return null;
-          const obj = JSON.parse(raw);
-          if(Array.isArray(obj)) return obj;
-        }catch(e){}
-        return null;
+    // local
+    localPicker: $('#localPicker'),
+    dropZone: $('#dropZone'),
+    localList: $('#localList'),
+  };
+
+  // --- UTIL: OneDrive link normalization (unchanged) ---
+  function normalizeOneDriveLink(input){
+    if(!input) throw new Error('Empty link');
+    let link = input.trim();
+    const m = link.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*><\/iframe>/i) || link.match(/src=["']([^"']+)["']/i);
+    if(m && m[1]) link = m[1];
+    try{ const u = new URL(link); if(u.hostname.includes('onedrive.live.com')){
+      if(u.pathname.includes('/embed')) return link;
+      const resid = u.searchParams.get('resid');
+      const auth = u.searchParams.get('authkey');
+      if(resid){
+        const embed = new URL('https://onedrive.live.com/embed');
+        embed.searchParams.set('resid', resid);
+        if(auth) embed.searchParams.set('authkey', auth);
+        embed.searchParams.set('em','2');
+        return embed.toString();
       }
-      function saveLocal(){
-        try{
-          localStorage.setItem(persistKey, JSON.stringify(state.movies));
-        }catch(e){}
-      }
+    }} catch(e){}
+    if(/(^|\.)1drv\.ms\b/.test(link)){
+      throw new Error('Short 1drv.ms links cannot be auto-converted. In OneDrive use **Embed**.');
+    }
+    return link;
+  }
 
-      /** ------------------------------
-       * OneDrive helpers
-       * ------------------------------ */
-      function extractIframeSrc(html){
-        if(!html) return null;
-        const m = String(html).match(/<iframe[^>]+src=["']([^"']+)["']/i);
-        return m ? m[1] : null;
-      }
-      function isProbablyVideoUrl(u){
-        return /\.(mp4|webm|m4v|mov|mkv)(\?|#|$)/i.test(u);
-      }
-      function looksLikeOneDrive(u){
-        try{
-          const x = new URL(u);
-          return /onedrive\.live\.com$/.test(x.hostname) || /1drv\.ms$/.test(x.hostname);
-        }catch(e){ return false; }
-      }
-      function toOneDriveEmbed(u){
-        // Try best-effort conversion for common OneDrive patterns.
-        // If we find resid/authkey, prefer that.
-        try{
-          const url = new URL(u);
-          const resid = url.searchParams.get('resid');
-          const authkey = url.searchParams.get('authkey');
-          if(resid){
-            const base = `https://onedrive.live.com/embed?resid=${encodeURIComponent(resid)}&em=2`;
-            return authkey ? `${base}&authkey=${encodeURIComponent(authkey)}` : base;
-          }
-          // 1drv.ms short link – we can't resolve without network; keep original for iframe src
-          return u;
-        }catch(e){
-          return u;
-        }
-      }
+  function saveLocal(){
+    localStorage.setItem(storeKey, JSON.stringify(state.movies));
+  }
+  function loadLocal(){
+    try{
+      const raw = localStorage.getItem(storeKey);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return [] }
+  }
 
-      function normalizeLink(raw){
-        // Accept iframe code or direct URL
-        const trimmed = String(raw||'').trim();
-        if(!trimmed) return null;
+  async function loadRemoteJSON(){
+    try{
+      const res = await fetch('movies.json', {cache:'no-store'});
+      if(!res.ok) throw new Error('no file');
+      const arr = await res.json();
+      if(!Array.isArray(arr)) throw new Error('bad format');
+      state.mode = 'remote';
+      return arr;
+    }catch(e){
+      state.mode = 'local-store';
+      return null;
+    }
+  }
 
-        const iframeSrc = extractIframeSrc(trimmed);
-        if(iframeSrc){
-          return { kind: 'iframe', url: iframeSrc };
-        }
+  function renderStatus(){
+    if(els.status){
+      els.status.innerHTML = state.mode === 'remote'
+        ? 'Using shared \u003ckbd\u003Emovies.json\u003c/kbd\u003E from your site.'
+        : 'Using local browser storage. Export JSON to make it permanent on GitHub.';
+    }
+  }
 
-        // Not an iframe; assume URL
-        if(isProbablyVideoUrl(trimmed)){
-          return { kind: 'video', url: trimmed };
-        }
+  function renderMovies(){
+    const q = (els.search?.value || '').trim().toLowerCase();
+    const list = state.movies.filter(m => m.name.toLowerCase().includes(q));
+    els.grid.innerHTML = list.map(m => `
+      <div class="movie" data-id="${m.id}">
+        <div class="thumb">16:9</div>
+        <div class="body">
+          <div class="title">${escapeHtml(m.name)}</div>
+          <div class="stack">
+            <span class="tag">${new Date(m.addedAt||Date.now()).toLocaleDateString()}</span>
+          </div>
+          <div class="stack">
+            <button class="btn small" data-action="play">Play</button>
+            <button class="btn small secondary" data-action="edit">Edit</button>
+            <button class="btn small red" data-action="remove">Delete</button>
+          </div>
+        </div>
+      </div>`).join('') || `<div class="hint" style="padding:12px">No movies yet. Add one on the left.</div>`;
+  }
 
-        if(looksLikeOneDrive(trimmed)){
-          return { kind: 'iframe', url: toOneDriveEmbed(trimmed) };
-        }
+  function playCloud(m){
+    hideLocal();
+    els.cloudPlayer.classList.remove('invisible');
+    els.cloudPlayer.src = m.url;
+    els.nowPlaying.textContent = 'Now Playing (Cloud): ' + m.name;
+  }
 
-        // Fallback: treat as iframe to preserve hosting player's controls
-        return { kind: 'iframe', url: trimmed };
-      }
+  function stopPlayback(){
+    els.cloudPlayer.src = 'about:blank';
+    els.localPlayer.pause();
+    els.localPlayer.removeAttribute('src');
+    els.localPlayer.load();
+    els.nowPlaying.textContent = 'Nothing playing';
+    els.playError.textContent = '';
+  }
 
-      /** ------------------------------
-       * Rendering
-       * ------------------------------ */
-      const gallery = $("#cloudGallery");
-      const localGallery = $("#localGallery");
-      const videoEl = $("#video");
-      const iframeEl = $("#iframe");
-      const nowPlaying = $("#nowPlaying");
+  function startEdit(m){
+    state.editingId = m.id;
+    els.name.value = m.name;
+    els.link.value = m.url;
+    els.addBtn.disabled = true;
+    els.updateBtn.disabled = false;
+    els.cancelEditBtn.disabled = false;
+  }
 
-      function renderSourceChip(){
-        $("#librarySource").textContent = state.usingSharedJson ? "shared movies.json" : "local storage";
-      }
+  function clearEditor(){
+    state.editingId = null;
+    els.name.value = '';
+    els.link.value = '';
+    els.addBtn.disabled = false;
+    els.updateBtn.disabled = true;
+    els.cancelEditBtn.disabled = true;
+  }
 
-      function cardForMovie(m){
-        const play = el('button',{class:'btn primary', onclick:()=>selectMovie(m.id)},['Play']);
-        const edit = el('button',{class:'btn', onclick:()=>beginEdit(m.id)},['Edit']);
-        const del  = el('button',{class:'btn warn', onclick:()=>removeMovie(m.id)},['Delete']);
-        return el('div',{class:'card', dataset:{id:m.id}},[
-          el('h4',{},[document.createTextNode(m.title||'Untitled')]),
-          el('p',{class:'meta'},[
-            document.createTextNode(m.kind === 'video' ? 'Direct video' : 'OneDrive / iframe')
-          ]),
-          el('div',{class:'cta'},[play, edit, del])
-        ]);
-      }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"]+/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
 
-      function renderCloud(filterTerm=''){
-        gallery.innerHTML = '';
-        const term = String(filterTerm||'').toLowerCase();
-        const list = term
-          ? state.movies.filter(m => (m.title||'').toLowerCase().includes(term))
-          : state.movies.slice();
-        if(list.length === 0){
-          gallery.appendChild(
-            el('div',{class:'section muted'},[
-              document.createTextNode('No movies yet. Add some from the hamburger (☰) sidebar → “Add movies”.')
-            ])
-          );
-          return;
-        }
-        for(const m of list){
-          gallery.appendChild(cardForMovie(m));
-        }
-      }
+  // ---------- LOCAL PLAYBACK ----------
+  function showLocal(){
+    els.cloudControls.classList.add('invisible');
+    els.localControls.classList.remove('invisible');
+    els.cloudPlayer.classList.add('invisible');
+    els.localPlayer.classList.remove('invisible');
+    state.uiMode = 'local';
+  }
+  function hideLocal(){
+    els.localPlayer.classList.add('invisible');
+    els.cloudPlayer.classList.remove('invisible');
+    state.uiMode = 'cloud';
+  }
 
-      function renderLocal(){
-        localGallery.innerHTML = '';
-        if(state.localFiles.length === 0){
-          localGallery.appendChild(
-            el('div',{class:'section muted'},['Pick one or more local video files to list them here.'])
-          );
-          return;
-        }
-        for(const f of state.localFiles){
-          const btn = el('button',{class:'btn primary', onclick:()=>playLocal(f)},['Play']);
-          localGallery.appendChild(
-            el('div',{class:'card'},[
-              el('h4',{},[document.createTextNode(f.name)]),
-              el('p',{class:'meta'},[`Local file — ${(f.size/1_000_000).toFixed(1)} MB`]),
-              el('div',{class:'cta'},[btn])
-            ])
-          );
-        }
-      }
+  function listLocalFiles(files){
+    state.localFiles = files;
+    els.localList.innerHTML = files.map((f, i)=>`
+      <div class="local-item" data-i="${i}">
+        ${escapeHtml(f.name)}
+      </div>
+    `).join('') || `<div class="hint">No local files selected yet.</div>`;
+  }
 
-      function setPlayer(kind, url, title=''){
-        // Reset
-        videoEl.pause();
-        videoEl.removeAttribute('src');
-        videoEl.style.display = 'none';
-        iframeEl.style.display = 'none';
-        iframeEl.removeAttribute('src');
+  function guessMime(file){
+    // Trust the file.type if present; otherwise guess by extension
+    if(file.type) return file.type;
+    const ext = file.name.toLowerCase().split('.').pop();
+    const map = {
+      mp4:'video/mp4', m4v:'video/mp4', mov:'video/quicktime',
+      webm:'video/webm', mkv:'video/x-matroska', avi:'video/x-msvideo'
+    };
+    return map[ext] || 'video/*';
+  }
 
-        if(kind === 'video'){
-          videoEl.style.display = '';
-          videoEl.src = url;
-          nowPlaying.textContent = `Now playing: ${title}`;
-          setTimeout(()=> videoEl.play().catch(()=>{}), 50);
-        }else{
-          iframeEl.style.display = '';
-          iframeEl.src = url;
-          nowPlaying.textContent = `Now playing (iframe): ${title}`;
-        }
+  function canBrowserPlay(mime){
+    // Quick capability hint; not perfect for MKV (varies by codec)
+    const v = document.createElement('video');
+    const res = v.canPlayType(mime);
+    return !!res;
+  }
 
-        // Show contextual buttons
-        $("#editSelected").style.display = state.selectedId ? '' : 'none';
-        $("#removeSelected").style.display = state.selectedId ? '' : 'none';
-      }
+  function playLocalFile(file){
+    els.playError.textContent = '';
+    const mime = guessMime(file);
+    // Always attempt to play; but show a friendly warning if likely unsupported
+    if(!canBrowserPlay(mime) && /\.mkv$/i.test(file.name)){
+      els.playError.textContent = 'Heads up: Your browser might not support some MKV codecs. If playback fails, cast the tab or open in a desktop player (e.g., VLC).';
+    }
+    const url = URL.createObjectURL(file);
+    els.localPlayer.src = url;
+    els.localPlayer.play().catch(()=>{ /* user gesture required or unsupported */ });
+    els.nowPlaying.textContent = 'Now Playing (Local): ' + file.name;
 
-      /** ------------------------------
-       * Actions
-       * ------------------------------ */
-      function selectMovie(id){
-        const m = state.movies.find(x=>x.id===id);
-        if(!m) return;
-        state.selectedId = id;
-        setPlayer(m.kind, m.url, m.title);
-      }
+    // Error handler for unsupported codecs/containers
+    els.localPlayer.onerror = () => {
+      els.playError.textContent = 'Could not play this file. Likely unsupported codec in the container. Try VLC or convert to MP4 (H.264/AAC).';
+    };
+  }
 
-      function beginEdit(id){
-        const m = state.movies.find(x=>x.id===id);
-        if(!m) return;
-        state.editingId = id;
-        $("#movieTitle").value = m.title || '';
-        $("#movieLink").value = m.original || m.url || '';
-        $("#addBtn").style.display = 'none';
-        $("#saveBtn").style.display = '';
-        $("#cancelBtn").style.display = '';
-        openSidebar();
-      }
+  // ---------- Event handlers ----------
+  // Mode switch
+  els.cloudMode.addEventListener('click', () => {
+    hideLocal();
+    els.cloudControls.classList.remove('invisible');
+    els.localControls.classList.add('invisible');
+  });
+  els.localMode.addEventListener('click', () => {
+    showLocal();
+    els.cloudControls.classList.add('invisible');
+  });
 
-      function cancelEdit(){
-        state.editingId = null;
-        $("#movieTitle").value = '';
-        $("#movieLink").value = '';
-        $("#addBtn").style.display = '';
-        $("#saveBtn").style.display = 'none';
-        $("#cancelBtn").style.display = 'none';
-      }
+  // Cloud CRUD
+  els.addBtn.addEventListener('click', () => {
+    const name = els.name.value.trim();
+    const raw = els.link.value.trim();
+    if(!name || !raw){ alert('Please enter a movie name and a OneDrive link.'); return; }
+    let link;
+    try{ link = normalizeOneDriveLink(raw); }
+    catch(e){ alert(e.message); return; }
+    const movie = { id: crypto.randomUUID(), name, url: link, addedAt: Date.now() };
+    state.movies.unshift(movie);
+    saveLocal();
+    renderMovies();
+    clearEditor();
+  });
 
-      function addMovie(){
-        const title = $("#movieTitle").value.trim();
-        const raw = $("#movieLink").value.trim();
-        if(!title || !raw){
-          alert("Please provide both a Movie Name and a OneDrive link or embed code.");
-          return;
-        }
-        const norm = normalizeLink(raw);
-        if(!norm){
-          alert("Could not understand that link. Please paste a OneDrive embed/URL or a direct video link.");
-          return;
-        }
-        const m = { id: uid(), title, url: norm.url, kind: norm.kind, original: raw, addedAt: Date.now() };
-        state.movies.unshift(m);
+  els.updateBtn.addEventListener('click', () => {
+    if(!state.editingId) return;
+    const name = els.name.value.trim();
+    const raw = els.link.value.trim();
+    if(!name || !raw){ alert('Please enter a movie name and a OneDrive link.'); return; }
+    let link;
+    try{ link = normalizeOneDriveLink(raw); }
+    catch(e){ alert(e.message); return; }
+    const i = state.movies.findIndex(m => m.id === state.editingId);
+    if(i>=0){ state.movies[i] = { ...state.movies[i], name, url: link }; }
+    saveLocal();
+    renderMovies();
+    clearEditor();
+  });
+
+  els.cancelEditBtn.addEventListener('click', clearEditor);
+
+  els.grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const card = e.target.closest('.movie');
+    const id = card?.dataset.id;
+    const m = state.movies.find(x => x.id === id);
+    if(!m) return;
+
+    const action = btn.dataset.action;
+    if(action === 'play'){ hideLocal(); playCloud(m); }
+    else if(action === 'edit') startEdit(m);
+    else if(action === 'remove'){
+      if(confirm('Delete this movie?')){
+        const i = state.movies.findIndex(x => x.id === id);
+        if(i>=0) state.movies.splice(i,1);
         saveLocal();
-        renderCloud($("#searchBox").value || $("#searchBoxTop").value);
-        cancelEdit();
+        renderMovies();
+        if(els.nowPlaying.textContent.includes(m.name)) stopPlayback();
       }
+    }
+  });
 
-      function saveChanges(){
-        const id = state.editingId;
-        if(!id) return;
-        const title = $("#movieTitle").value.trim();
-        const raw = $("#movieLink").value.trim();
-        if(!title || !raw){
-          alert("Please provide both a Movie Name and a OneDrive link or embed code.");
-          return;
-        }
-        const norm = normalizeLink(raw);
-        if(!norm){
-          alert("Could not understand that link.");
-          return;
-        }
-        const i = state.movies.findIndex(x=>x.id===id);
-        if(i>=0){
-          state.movies[i] = { ...state.movies[i], title, url: norm.url, kind: norm.kind, original: raw, updatedAt: Date.now() };
-          saveLocal();
-          renderCloud($("#searchBox").value || $("#searchBoxTop").value);
-          if(state.selectedId === id){
-            setPlayer(norm.kind, norm.url, title);
-          }
-        }
-        cancelEdit();
-      }
+  els.exportBtn.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state.movies, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'movies.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
 
-      function removeMovie(id){
-        if(!confirm("Remove this movie from your Cloud Library?")) return;
-        const i = state.movies.findIndex(x=>x.id===id);
-        if(i>=0){
-          state.movies.splice(i,1);
-          if(state.selectedId === id){
-            state.selectedId = null;
-            nowPlaying.textContent = "Select a movie to play";
-            setPlayer('video',''); // clears
-          }
-          saveLocal();
-          renderCloud($("#searchBox").value || $("#searchBoxTop").value);
-        }
-      }
+  els.importFile.addEventListener('change', async () => {
+    const file = els.importFile.files[0]; if(!file) return;
+    try{
+      const text = await file.text();
+      const arr = JSON.parse(text);
+      if(!Array.isArray(arr)) throw new Error('Invalid JSON: expected an array');
+      state.movies = arr.map(x => ({ id: x.id || crypto.randomUUID(), name: String(x.name||'Untitled'), url: String(x.url||''), addedAt: x.addedAt||Date.now() }));
+      saveLocal();
+      renderMovies();
+      alert('Imported successfully!');
+    }catch(err){ alert('Import failed: ' + err.message); }
+    finally{ els.importFile.value = ''; }
+  });
 
-      function playLocal(file){
-        const url = URL.createObjectURL(file);
-        state.selectedId = null; // playing ad-hoc
-        setPlayer('video', url, file.name);
-      }
+  els.clearBtn.addEventListener('click', () => {
+    if(confirm('Clear all movies from this browser?')){
+      state.movies = [];
+      saveLocal();
+      renderMovies();
+      stopPlayback();
+    }
+  });
 
-      /** ------------------------------
-       * Import / Export
-       * ------------------------------ */
-      function downloadJson(){
-        const data = JSON.stringify(state.movies, null, 2);
-        const blob = new Blob([data], {type:'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'movies.json';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(a.href);
-      }
+  els.search?.addEventListener('input', renderMovies);
+  els.clearSearch?.addEventListener('click', () => { els.search.value=''; renderMovies(); });
 
-      function importJson(file){
-        const reader = new FileReader();
-        reader.onload = () => {
-          try{
-            const arr = JSON.parse(reader.result);
-            if(!Array.isArray(arr)) throw new Error("Not an array");
-            // Light validation
-            const cleaned = arr.map(x=>({
-              id: x.id || uid(),
-              title: String(x.title||'Untitled'),
-              url: String(x.url||''),
-              kind: x.kind === 'video' ? 'video' : 'iframe',
-              original: x.original || x.url || '',
-              importedAt: Date.now()
-            }));
-            state.movies = cleaned;
-            saveLocal();
-            renderCloud($("#searchBox").value || $("#searchBoxTop").value);
-            alert("Imported movies.json successfully.");
-          }catch(e){
-            alert("Failed to import: " + e.message);
-          }
-        };
-        reader.readAsText(file);
-      }
+  els.fullscreenBtn.addEventListener('click', () => {
+    const el = els.stage;
+    if(document.fullscreenElement){ document.exitFullscreen(); }
+    else{ el.requestFullscreen?.(); }
+  });
 
-      function clearAll(){
-        if(!confirm("Clear your local Cloud Library (this does NOT delete any file on OneDrive or your repo)?")) return;
-        state.movies = [];
-        saveLocal();
-        renderCloud();
-        state.selectedId = null;
-        nowPlaying.textContent = "Select a movie to play";
-        setPlayer('video','');
-      }
+  els.stopBtn.addEventListener('click', stopPlayback);
 
-      /** ------------------------------
-       * Search (sidebar + top bar stay in sync)
-       * ------------------------------ */
-      function syncSearchBoxes(val){
-        $("#searchBox").value = val;
-        $("#searchBoxTop").value = val;
-        renderCloud(val);
-      }
+  // Local file input + DnD
+  els.localPicker.addEventListener('change', (e)=>{
+    const files = Array.from(e.target.files || []);
+    listLocalFiles(files);
+    showLocal();
+  });
+  ;['dragenter','dragover'].forEach(ev => els.dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); els.dropZone.style.borderColor = '#4f8cff';
+  }));
+  ;['dragleave','drop'].forEach(ev => els.dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); els.dropZone.style.borderColor = '#2a3140';
+  }));
+  els.dropZone.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files || []).filter(f => /^video\//.test(f.type) || /\.(mkv|mp4|webm|mov|avi|m4v)$/i.test(f.name));
+    listLocalFiles(files);
+    showLocal();
+  });
 
-      /** ------------------------------
-       * Tabs
-       * ------------------------------ */
-      function setTab(name){
-        const isCloud = name === 'cloud';
-        $("#tabCloud").classList.toggle('active', isCloud);
-        $("#tabLocal").classList.toggle('active', !isCloud);
-        $("#cloudView").style.display = isCloud ? '' : 'none';
-        $("#localView").style.display = isCloud ? 'none' : '';
-      }
+  els.localList.addEventListener('click', e => {
+    const item = e.target.closest('.local-item');
+    if(!item) return;
+    const i = Number(item.dataset.i);
+    const file = state.localFiles[i];
+    if(file){ showLocal(); playLocalFile(file); }
+  });
 
-      /** ------------------------------
-       * Sidebar (hamburger)
-       * ------------------------------ */
-      const appRoot = $("#app");
-      function openSidebar(){ appRoot.classList.add('sidebar-open'); }
-      function closeSidebar(){ appRoot.classList.remove('sidebar-open'); }
-
-      /** ------------------------------
-       * Init
-       * ------------------------------ */
-      async function init(){
-        // Load from shared movies.json first; if that fails, use localStorage.
-        try{
-          const res = await fetch('./movies.json', {cache:'no-store'});
-          if(res.ok){
-            const arr = await res.json();
-            if(Array.isArray(arr)){
-              state.movies = arr.map(x=>({
-                id: x.id || uid(),
-                title: String(x.title||'Untitled'),
-                url: String(x.url||''),
-                kind: x.kind === 'video' ? 'video' : 'iframe',
-                original: x.original || x.url || ''
-              }));
-              state.usingSharedJson = true;
-            }
-          }
-        }catch(e){ /* ignore */ }
-
-        if(!state.movies.length){
-          const local = loadLocal();
-          if(local && local.length){
-            state.movies = local;
-            state.usingSharedJson = false;
-          }
-        }
-
-        renderSourceChip();
-        $("#sharedNote").style.color = state.usingSharedJson ? "var(--muted)" : "var(--warn)";
-        $("#sharedNote").innerHTML = state.usingSharedJson
-          ? 'Using shared <code>movies.json</code> from your site.'
-          : 'No shared <code>movies.json</code> detected — using your browser storage.';
-
-        renderCloud();
-        renderLocal();
-
-        // Keyboard: Esc closes sidebar
-        window.addEventListener('keydown', (e)=>{
-          if(e.key === 'Escape') closeSidebar();
-        });
-      }
-
-      /** ------------------------------
-       * Wire up events
-       * ------------------------------ */
-      // Tabs
-      $("#tabCloud").addEventListener('click', ()=> setTab('cloud'));
-      $("#tabLocal").addEventListener('click', ()=> setTab('local'));
-
-      // Search
-      $("#searchBox").addEventListener('input', (e)=> syncSearchBoxes(e.target.value));
-      $("#searchBoxTop").addEventListener('input', (e)=> syncSearchBoxes(e.target.value));
-      $("#clearSearch").addEventListener('click', ()=> syncSearchBoxes(''));
-      $("#clearSearchTop").addEventListener('click', ()=> syncSearchBoxes(''));
-
-      // Add/Edit
-      $("#addBtn").addEventListener('click', addMovie);
-      $("#saveBtn").addEventListener('click', saveChanges);
-      $("#cancelBtn").addEventListener('click', cancelEdit);
-      $("#editSelected").addEventListener('click', ()=> state.selectedId && beginEdit(state.selectedId));
-      $("#removeSelected").addEventListener('click', ()=> state.selectedId && removeMovie(state.selectedId));
-
-      // Import/Export
-      $("#downloadJson").addEventListener('click', downloadJson);
-      $("#importJsonInput").addEventListener('change', (e)=> {
-        const f = e.target.files && e.target.files[0];
-        if(f) importJson(f);
-        e.target.value = '';
-      });
-      $("#clearAll").addEventListener('click', clearAll);
-
-      // Local files
-      $("#localPicker").addEventListener('change', (e)=>{
-        state.localFiles = Array.from(e.target.files || []);
-        renderLocal();
-      });
-
-      // Sidebar (hamburger)
-      $("#toggleSidebar").addEventListener('click', openSidebar);
-      $("#openFeatures").addEventListener('click', openSidebar);
-      $("#backdrop").addEventListener('click', closeSidebar);
-      $("#closeSidebar").addEventListener('click', closeSidebar);
-
-      // Start
-      init();
-
-    })();
-  </script>
+  // --- Init ---
+  (async function init(){
+    const remote = await loadRemoteJSON();
+    if(remote){ state.movies = remote; }
+    else{ state.movies = loadLocal(); }
+    renderStatus();
+    renderMovies();
+  })();
+})();
+</script>
 </body>
 </html>
