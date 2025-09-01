@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Top bar with hamburger -->
   <div class="topbar">
     <button id="hamburger" class="hamburger" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
       <span></span><span></span><span></span>
@@ -43,6 +44,12 @@
             Tip: In OneDrive, open the video → <span class="kbd">Embed</span> → copy the iframe or URL.
             This app auto-converts most OneDrive links.
           </div>
+        </div>
+
+        <div class="row">
+          <label for="posterUrl">Poster Image URL (optional)</label>
+          <input id="posterUrl" type="text" placeholder="e.g., assets/inception-2010.jpg or https://..." />
+          <div class="hint">If left blank, the app will try <span class="kbd">assets/&lt;movie-slug&gt;.jpg</span> then <span class="kbd">.png</span>. Fallback → <span class="kbd">assets/poster-fallback.svg</span>.</div>
         </div>
 
         <div class="stack">
