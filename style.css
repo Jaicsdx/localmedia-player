@@ -62,10 +62,12 @@ input[type="file"]{width:100%}
 .divider{border-color:#232a39; opacity:.3}
 .searchbar{display:flex; gap:8px}
 
-/* Movies grid */
+/* Movies grid (with poster aspect) */
 .movies{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; padding:16px}
 .movie{background:#0f1420; border:1px solid #232a39; border-radius:16px; overflow:hidden; display:flex; flex-direction:column}
-.movie .thumb{aspect-ratio:16/9; background:linear-gradient(135deg,#1a2030,#0e1320); display:grid; place-items:center; color:#a7b0c4}
+.movie .thumb{aspect-ratio:2/3; background:linear-gradient(135deg,#1a2030,#0e1320); position:relative}
+.movie .thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.movie .thumb .fallback-text{position:absolute; left:8px; right:8px; bottom:8px; font-size:12px; color:#a7b0c4; background:rgba(0,0,0,.35); padding:4px 6px; border-radius:6px}
 .movie .body{padding:12px; display:flex; flex-direction:column; gap:10px}
 .movie .title{font-weight:700}
 
