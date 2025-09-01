@@ -40,6 +40,12 @@
           <textarea id="movieLink" rows="3" placeholder="Paste OneDrive embed link or share URL"></textarea>
           <div class="hint">Tip: In OneDrive, open the video → <span class="kbd">Embed</span> → copy the iframe or URL.</div>
         </div>
+        <div class="row">
+          <label for="posterUrl">Poster Image URL (optional)</label>
+          <input id="posterUrl" type="text" placeholder="e.g., assets/inception-2010.jpg or https://..." />
+          <div class="hint">If blank, the app tries <span class="kbd">assets/&lt;movie-slug&gt;.jpg</span>, then <span class="kbd">.png</span>, then a built-in fallback.</div>
+        </div>
+
         <div class="stack">
           <button class="btn" id="addBtn" type="button">Add Movie</button>
           <button class="btn secondary" id="updateBtn" type="button" disabled>Save Changes</button>
