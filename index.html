@@ -1,173 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Online Media Player</title>
-
-<style>
-:root{
-  --bg:#0f1116; --panel:#151823; --muted:#8e95a5; --text:#e6e8ee; --accent:#4f8cff; --accent-2:#22c55e; --danger:#ef4444;
-  --radius:18px;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-  background:linear-gradient(180deg,#0f1116,#0b0d12);
-  color:var(--text);
-}
-
-/* Top bar */
-.topbar{
-  position:sticky; top:0; z-index:40;
-  display:flex; align-items:center; gap:12px;
-  padding:10px 12px; border-bottom:1px solid #1f2430;
-  background:rgba(15,17,22,.75); backdrop-filter: blur(6px);
-}
-.brand{display:flex; align-items:center; gap:10px; min-width:0}
-.brand .dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
-.brand-text h1{font-size:16px; margin:0}
-.brand-text .sub{color:var(--muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:72vw}
-
-.hamburger{
-  width:42px; height:38px; border:1px solid #2a3140; border-radius:10px; background:#0f1420; cursor:pointer; display:grid; place-items:center;
-}
-.hamburger span{display:block; width:18px; height:2px; background:#c7d0ea; margin:3px 0; border-radius:2px}
-
-/* Layout */
-.app{display:grid; grid-template-columns:320px 1fr; gap:16px; padding:16px; min-height:calc(100% - 60px);}
-.card{background:var(--panel); border:1px solid #1f2430; border-radius:var(--radius); box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.sidebar{padding:16px; display:flex; flex-direction:column; gap:16px; max-height:calc(100vh - 92px); overflow:auto}
-.main{display:flex; flex-direction:column; min-height:0}
-
-/* Inputs */
-h1{font-size:20px; margin:0 0 4px}
-.sub{color:var(--muted); font-size:13px}
-label{font-size:13px; color:var(--muted)}
-input[type="text"], textarea, select{
-  width:100%; padding:12px 12px; border-radius:12px; border:1px solid #2a3140; outline:none; background:#0f1420; color:var(--text);
-}
-input[type="file"]{width:100%}
-.row{display:grid; grid-template-columns:1fr; gap:10px}
-.btn{appearance:none; border:none; border-radius:12px; padding:12px 14px; color:white; background:var(--accent); cursor:pointer; font-weight:600}
-.btn.secondary{background:#2a3140}
-.btn.green{background:var(--accent-2)}
-.btn.red{background:#ef4444}
-.btn.small{padding:8px 10px; font-size:12px; font-weight:700}
-.hint{font-size:12px; color:var(--muted)}
-.stack{display:flex; gap:8px; flex-wrap:wrap}
-.kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:11px; background:#0b0e15; border:1px solid #25304a; padding:2px 6px; border-radius:6px; color:#c5cbe3}
-.pill{background:#0f1420; border:1px solid #283044; color:#a7b0c4; padding:6px 10px; border-radius:999px; font-size:12px}
-.drop{border:2px dashed #2a3140; border-radius:14px; padding:10px; text-align:center; color:#a7b0c4}
-.local-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px}
-.local-item{background:#0f1420; border:1px solid #232a39; border-radius:12px; padding:8px; cursor:pointer}
-.local-item:hover{background:#192033}
-.status{font-size:12px; color:#a7b0c4}
-.error{color:#ffb4b4}
-.invisible{display:none !important}
-.divider{border-color:#232a39; opacity:.3}
-
-/* Player */
-.player{display:flex; flex-direction:column; gap:12px; padding:16px}
-.controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.grow{flex:1}
-.stage{position:relative; background:black; border-radius:16px; overflow:hidden; border:1px solid #232a39; height:min(70vh, 70dvh)}
-.stage iframe, .stage video{position:absolute; inset:0; width:100%; height:100%; border:0; background:black}
-
-/* Movies grid */
-.movies-section{padding:0 16px 16px}
-.movies{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px}
-.movie{background:#0f1420; border:1px solid #232a39; border-radius:16px; overflow:hidden; display:flex; flex-direction:column}
-.movie .thumb{aspect-ratio:2/3; background:linear-gradient(135deg,#1a2030,#0e1320); display:grid; place-items:center; color:#a7b0c4; position:relative; overflow:hidden}
-.movie .thumb img{width:100%; height:100%; object-fit:cover; display:block}
-.movie .thumb .fallback-text{position:absolute; inset:auto 8px 8px 8px; font-size:12px; opacity:.85}
-.movie .body{padding:12px; display:flex; flex-direction:column; gap:10px}
-.movie .title{font-weight:700}
-.tag{font-size:10px; color:#a7b0c4; background:#1b2131; border:1px solid #283044; padding:4px 6px; border-radius:999px}
-
-/* Responsive: sidebar overlays on mobile */
-@media (max-width: 960px){
-  .app{grid-template-columns:1fr}
-  .sidebar{
-    position:fixed; inset:auto 0 0 0; top:60px;
-    max-height:calc(100vh - 60px);
-    transform:translateX(-105%);
-    transition:transform .25s ease;
-    z-index:50;
-  }
-  body.nav-open #sidebar{ transform:translateX(0) }
-  body.nav-open::before{ content:""; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40; }
-}
-@media (min-width: 961px){
-  body.nav-collapsed .app{grid-template-columns:72px 1fr}
-  body.nav-collapsed #sidebar{padding:10px}
-  body.nav-collapsed #sidebar .row,
-  body.nav-collapsed #cloudControls,
-  body.nav-collapsed #localControls{display:none}
-  body.nav-collapsed .brand-text{display:none}
-}
-.hint-list{margin:6px 0 0 16px; padding:0; line-height:1.6}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Online Media Player</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <!-- top bar -->
-  <div class="topbar">
-    <button id="hamburger" class="hamburger" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="brand">
-      <div class="dot"></div>
-      <div class="brand-text">
-        <h1>Online Media Player</h1>
-        <div class="sub">Add movies (Name + OneDrive link) or play local files. JSON is still supported.</div>
-      </div>
-    </div>
-  </div>
-
   <div class="app">
     <!-- Sidebar -->
-    <aside id="sidebar" class="card sidebar" aria-label="Library & Data">
+    <aside class="card sidebar">
+      <div class="logo">
+        <div class="dot"></div>
+        <div>
+          <h1>Online Media Player</h1>
+          <div class="sub">Add movies (Name + OneDrive link) or play local files. JSON is still supported.</div>
+        </div>
+      </div>
+
       <div class="stack">
-        <span id="cloudMode" class="pill" role="button" tabindex="0">Cloud Library</span>
-        <span id="localMode" class="pill" role="button" tabindex="0">Local Files</span>
+        <span id="cloudMode" class="pill">Cloud Library</span>
+        <span id="localMode" class="pill">Local Files</span>
       </div>
 
       <div id="cloudControls">
         <div class="row">
-          <label for="movieName">Movie Name</label>
+          <label>Movie Name</label>
           <input id="movieName" type="text" placeholder="e.g., Inception (2010)" />
         </div>
-
         <div class="row">
-          <label for="movieLink">OneDrive Link or Embed Code</label>
+          <label>OneDrive Link or Embed Code</label>
           <textarea id="movieLink" rows="3" placeholder="Paste OneDrive embed link or share URL"></textarea>
-          <div class="hint">
-            Tip: In OneDrive, open the video → <span class="kbd">Embed</span> → copy the iframe or URL.
-            This app auto-converts most OneDrive links.
-          </div>
         </div>
-
-        <div class="row">
-          <label for="posterUrl">Poster Image URL (optional)</label>
-          <input id="posterUrl" type="text" placeholder="e.g., assets/inception-2010.jpg or https://..." />
-          <div class="hint">If blank, tries <span class="kbd">assets/&lt;movie-slug&gt;.jpg</span>, then <span class="kbd">.png</span>, then built-in SVG fallback.</div>
-        </div>
-
         <div class="stack">
           <button class="btn" id="addBtn">Add Movie</button>
           <button class="btn secondary" id="updateBtn" disabled>Save Changes</button>
           <button class="btn red" id="cancelEditBtn" disabled>Cancel</button>
         </div>
-
-        <hr class="divider">
-        <div class="searchbar" style="display:flex; gap:8px">
+        <hr>
+        <div class="searchbar">
           <input id="searchInput" type="text" placeholder="Search movies..." />
           <button class="btn small" id="clearSearchBtn">Clear</button>
         </div>
-
         <div class="row">
           <label>Data Management</label>
           <div class="stack">
@@ -178,24 +52,13 @@ input[type="file"]{width:100%}
           </div>
           <div class="status" id="status">Loading…</div>
         </div>
-
-        <div class="hint">
-          <strong>Make it permanent on GitHub Pages:</strong>
-          <ol class="hint-list">
-            <li>Use <em>Download movies.json</em> after adding titles.</li>
-            <li>Upload <span class="kbd">movies.json</span> to your repo (same folder as this HTML).</li>
-            <li>Deploy with GitHub Pages. Visitors will load the shared <span class="kbd">movies.json</span>.</li>
-          </ol>
-        </div>
       </div>
 
-      <!-- LOCAL CONTROLS -->
       <div id="localControls" class="invisible">
         <div class="row">
-          <label for="localPicker">Pick local files (drag & drop or choose)</label>
+          <label>Pick local files</label>
           <input id="localPicker" type="file" accept="video/*,.mkv,.mp4,.webm,.mov,.avi,.m4v" multiple />
           <div id="dropZone" class="drop">Drop videos here</div>
-          <div class="hint">MKV may not play if codecs are unsupported in your browser.</div>
         </div>
         <div class="row">
           <label>Selected files</label>
@@ -204,43 +67,25 @@ input[type="file"]{width:100%}
       </div>
     </aside>
 
-    <!-- Main: Player + Movies -->
+    <!-- Main -->
     <main class="card main">
-      <section class="player">
+      <div class="player">
         <div class="controls">
-          <div class="stack">
-            <button class="btn small" id="fullscreenBtn">Fullscreen Player</button>
-            <button class="btn small secondary" id="stopBtn">Stop</button>
-          </div>
+          <button class="btn small" id="fullscreenBtn">Fullscreen</button>
+          <button class="btn small secondary" id="stopBtn">Stop</button>
           <div class="grow"></div>
           <div class="status" id="nowPlaying">Nothing playing</div>
         </div>
-
         <div class="stage" id="stage">
-          <iframe id="cloudPlayer" class="invisible" allowfullscreen referrerpolicy="no-referrer"></iframe>
+          <iframe id="cloudPlayer" class="invisible" allowfullscreen></iframe>
           <video id="localPlayer" class="invisible" controls playsinline></video>
         </div>
-
         <div id="playError" class="status error"></div>
-      </section>
-
-      <section aria-label="Movies" class="movies-section">
-        <div class="movies" id="movies"></div>
-      </section>
+      </div>
+      <div class="movies" id="movies"></div>
     </main>
   </div>
 
-<script>
-(() => {
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
-
-  // Elements
-  const els = {
-    body: document.body, hamburger: $('#hamburger'), sidebar: $('#sidebar'),
-    cloudMode: $('#cloudMode'), localMode: $('#localMode'),
-    cloudControls: $('#cloudControls'), localControls: $('#localControls'),
-    name: $('#movieName'), link: $('#movieLink'), poster: $('#posterUrl'),
-    addBtn: $('#addBtn'), updateBtn: $('#updateBtn'), cancelEditBtn: $('#cancelEditBtn'),
-    exportBtn: $('#exportBtn'), importFile: $('#importFile'), clearBtn: $('#clearBtn'),
-    search: $('#searchInput'), clearSearch: $('#clearSearchBtn'), status: $('#status'), grid: $('#movi
+  <script src="script.js"></script>
+</body>
+</html>
